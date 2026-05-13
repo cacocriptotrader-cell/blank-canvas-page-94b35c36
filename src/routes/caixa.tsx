@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   useStore, computeShift, computePaymentDate, calculateExpectedPaymentDate, didSkipCycle, monthKey, monthLabel, fmtDate,
-  brl, brl2, PAYMENT_RULE_LABELS,
+  brl, brl2, PAYMENT_RULE_LABELS, TAX_LABELS,
 } from "@/lib/store";
 import { Section } from "@/components/Section";
-import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap } from "lucide-react";
+import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap, Download, Calendar as CalendarIcon, Building2 } from "lucide-react";
 import { ShiftHandoffModal } from "@/components/ShiftHandoffModal";
 
 export const Route = createFileRoute("/caixa")({
