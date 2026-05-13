@@ -7,6 +7,8 @@ import {
 import { Section } from "@/components/Section";
 import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap, Download, Calendar as CalendarIcon, Building2 } from "lucide-react";
 import { ShiftHandoffModal } from "@/components/ShiftHandoffModal";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/caixa")({
   head: () => ({
