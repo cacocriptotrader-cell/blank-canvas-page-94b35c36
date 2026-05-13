@@ -187,6 +187,10 @@ function CashFlow() {
         </div>
       </Section>
 
+      <div className="print-area">
+        <div className="hidden print:block print:text-center print:font-bold print:mb-6 print:text-2xl">
+          DOCFIN — Extrato de Rendimentos Mensais
+        </div>
       <Section title="Faturamento por Mês" subtitle="Plantões agrupados pela data de execução · valores brutos">
         <div className="space-y-2">
           {billingByMonth.length === 0 && (
