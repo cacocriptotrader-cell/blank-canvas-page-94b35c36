@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useStore, type CareerMoment } from "@/lib/store";
-import { ArrowRight, Command, User, Stethoscope, MapPin } from "lucide-react";
+import { ArrowRight, Command, User, Stethoscope, MapPin, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export function Onboarding() {
   const { completeOnboarding, updateUserProfile, setBase } = useStore();
+  const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
   const [careerMoment, setCareerMoment] = useState<CareerMoment>("Médico Especialista");
@@ -73,15 +75,38 @@ export function Onboarding() {
     setSuggestions([]);
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (step === 1) {
       setStep(2);
     } else {
-      updateUserProfile({ fullName, careerMoment, baseAddress });
-      if (lat !== null && lng !== null) {
-        setBase({ label: baseAddress, lat, lng });
+      setSaving(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Usuário não autenticado");
+
+        const { error } = await supabase.from("profiles").upsert({
+          id: user.id,
+          full_name: fullName,
+          specialty: careerMoment,
+          base_address: baseAddress,
+          onboarding_completed: true,
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) throw error;
+
+        updateUserProfile({ fullName, careerMoment, baseAddress });
+        if (lat !== null && lng !== null) {
+          setBase({ label: baseAddress, lat, lng });
+        }
+        completeOnboarding();
+        window.location.href = "/"; // Force reload to update OnboardingGate state
+      } catch (err: any) {
+        console.error("Erro ao salvar perfil:", err);
+        alert("Erro ao salvar perfil: " + err.message);
+      } finally {
+        setSaving(false);
       }
-      completeOnboarding();
     }
   }
 
@@ -191,10 +216,16 @@ export function Onboarding() {
 
             <button
               onClick={handleNext}
-              disabled={!isStep2Valid}
+              disabled={!isStep2Valid || saving}
               className="w-full mt-10 inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-white text-black text-sm font-semibold hover:bg-zinc-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-200"
             >
-              Finalizar Configuração <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  Finalizar Configuração <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+                </>
+              )}
             </button>
           </div>
         )}

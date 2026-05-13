@@ -4,6 +4,9 @@ import { StoreProvider, useStore } from "@/lib/store";
 import { AppShell } from "@/components/AppShell";
 import { Onboarding } from "@/components/Onboarding";
 import { FiscalOnboardingModal } from "@/components/FiscalOnboardingModal";
+import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 function NotFoundComponent() {
   return (
@@ -73,15 +76,78 @@ function RootComponent() {
 }
 
 function OnboardingGate() {
-  const { hasCompletedOnboarding, taxProfile } = useStore();
+  const { taxProfile } = useStore();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        checkOnboarding(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        checkOnboarding(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function checkOnboarding(userId: string) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", userId)
+      .single();
+    
+    setOnboardingCompleted(!!profile?.onboarding_completed);
+    setLoading(false);
+  }
+
   // Rota dedicada de impressão: bypass total (sem onboarding, sem shell).
   if (pathname === "/imprimir-relatorio") return <AppShell />;
-  if (!hasCompletedOnboarding) return <Onboarding />;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="h-8 w-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session && pathname !== "/login") {
+    navigate({ to: "/login" });
+    return null;
+  }
+
+  if (session && pathname === "/login") {
+    if (onboardingCompleted) {
+      navigate({ to: "/" });
+    } else {
+      // Stay on root to show onboarding
+    }
+  }
+
+  if (session && !onboardingCompleted) {
+    return <Onboarding />;
+  }
+
   return (
     <>
       <AppShell />
-      {!taxProfile.completed && <FiscalOnboardingModal />}
+      {session && !taxProfile.completed && <FiscalOnboardingModal />}
     </>
   );
 }
