@@ -265,7 +265,6 @@ function Manage() {
 
   function GoalsCard() {
     const [newGoalName, setNewGoalName] = useState("");
-    const [newGoalCategory, setNewGoalCategory] = useState<GoalCategory>("Casamento");
     const [newGoalTarget, setNewGoalTarget] = useState(0);
     const [newGoalDate, setNewGoalDate] = useState("");
 
@@ -273,13 +272,12 @@ function Manage() {
       if (!newGoalName.trim() || !newGoalDate || newGoalTarget <= 0) return;
       s.addGoal({
         name: newGoalName,
-        category: newGoalCategory,
+        category: "Outro",
         targetAmount: newGoalTarget,
         targetDate: newGoalDate,
         saved: 0,
       });
       setNewGoalName("");
-      setNewGoalCategory("Casamento");
       setNewGoalTarget(0);
       setNewGoalDate("");
     }
@@ -309,16 +307,7 @@ function Manage() {
             onChange={(e) => setNewGoalName(e.target.value)}
             className={inp}
           />
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={newGoalCategory}
-              onChange={(e) => setNewGoalCategory(e.target.value as GoalCategory)}
-              className={inp}
-            >
-              {Object.entries(GOAL_CATEGORY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 gap-2">
             <input
               type="date"
               value={newGoalDate}
@@ -642,54 +631,68 @@ function Manage() {
   }
 
   function VehicleCard() {
+    const hasVehicle = s.vehicle.model.trim() !== "";
+
     return (
       <Section title="Veículo" subtitle="Consumo, depreciação e manutenção — base para logística real">
-        <div className="glass-card rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
-            <div className="flex items-center gap-3 min-w-0">
-              <Car className="h-5 w-5 text-primary shrink-0" />
-              <p className="font-display truncate">{s.vehicle.model || "Sem veículo"}</p>
-            </div>
+        {!hasVehicle ? (
+          <div className="glass-card rounded-2xl p-12 flex flex-col items-center justify-center border-dashed border-white/10">
+            <Car className="h-8 w-8 text-muted-foreground/40 mb-4" />
             <button
-              type="button"
-              onClick={() => {
-                if (!confirm("Remover o veículo atual e cadastrar um novo?")) return;
-                s.setVehicle({ model: "", kmPerLiter: 10, fuelPrice: 5.89, depreciationPerKm: 0, maintenancePerKm: 0 });
-              }}
-              className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive border border-border rounded-lg px-2.5 py-1.5"
-              aria-label="Trocar veículo"
+              onClick={() => s.setVehicle({ ...s.vehicle, model: "Novo Veículo" })}
+              className="inline-flex items-center gap-2 rounded-xl bg-white text-black px-6 py-3 text-sm font-semibold hover:bg-zinc-200 transition"
             >
-              <Trash2 className="h-3 w-3" /> Trocar veículo
+              <Plus className="h-4 w-4" /> Adicionar Veículo
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Modelo">
-              <input value={s.vehicle.model} onChange={(e) => s.setVehicle({ ...s.vehicle, model: e.target.value })} className={inp} />
-            </Field>
-            <Field label="Consumo (km/L)">
-              <input type="number" step="0.5" value={s.vehicle.kmPerLiter}
-                onChange={(e) => s.setVehicle({ ...s.vehicle, kmPerLiter: +e.target.value })} className={inp} />
-            </Field>
-            <Field label="Combustível R$/L">
-              <input type="number" step="0.01" value={s.vehicle.fuelPrice}
-                onChange={(e) => s.setVehicle({ ...s.vehicle, fuelPrice: +e.target.value })} className={inp} />
-            </Field>
-            <Field label="Depreciação R$/km">
-              <input type="number" step="0.01" value={s.vehicle.depreciationPerKm}
-                onChange={(e) => s.setVehicle({ ...s.vehicle, depreciationPerKm: +e.target.value })} className={inp} />
-            </Field>
-            <Field label="Manutenção R$/km">
-              <input type="number" step="0.01" value={s.vehicle.maintenancePerKm}
-                onChange={(e) => s.setVehicle({ ...s.vehicle, maintenancePerKm: +e.target.value })} className={inp} />
-            </Field>
-            <Field label="Custo desgaste R$/km">
-              <input disabled value={(s.vehicle.depreciationPerKm + s.vehicle.maintenancePerKm).toFixed(2)} className={inp + " opacity-70"} />
-            </Field>
+        ) : (
+          <div className="glass-card rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+              <div className="flex items-center gap-3 min-w-0">
+                <Car className="h-5 w-5 text-primary shrink-0" />
+                <p className="font-display truncate">{s.vehicle.model}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm("Remover o veículo atual e cadastrar um novo?")) return;
+                  s.setVehicle({ model: "", kmPerLiter: 10, fuelPrice: 5.89, depreciationPerKm: 0, maintenancePerKm: 0 });
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive border border-border rounded-lg px-2.5 py-1.5"
+                aria-label="Trocar veículo"
+              >
+                <Trash2 className="h-3 w-3" /> Trocar veículo
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Modelo">
+                <input value={s.vehicle.model} onChange={(e) => s.setVehicle({ ...s.vehicle, model: e.target.value })} className={inp} />
+              </Field>
+              <Field label="Consumo (km/L)">
+                <input type="number" step="0.5" value={s.vehicle.kmPerLiter}
+                  onChange={(e) => s.setVehicle({ ...s.vehicle, kmPerLiter: +e.target.value })} className={inp} />
+              </Field>
+              <Field label="Combustível R$/L">
+                <input type="number" step="0.01" value={s.vehicle.fuelPrice}
+                  onChange={(e) => s.setVehicle({ ...s.vehicle, fuelPrice: +e.target.value })} className={inp} />
+              </Field>
+              <Field label="Depreciação R$/km">
+                <input type="number" step="0.01" value={s.vehicle.depreciationPerKm}
+                  onChange={(e) => s.setVehicle({ ...s.vehicle, depreciationPerKm: +e.target.value })} className={inp} />
+              </Field>
+              <Field label="Manutenção R$/km">
+                <input type="number" step="0.01" value={s.vehicle.maintenancePerKm}
+                  onChange={(e) => s.setVehicle({ ...s.vehicle, maintenancePerKm: +e.target.value })} className={inp} />
+              </Field>
+              <Field label="Custo desgaste R$/km">
+                <input disabled value={(s.vehicle.depreciationPerKm + s.vehicle.maintenancePerKm).toFixed(2)} className={inp + " opacity-70"} />
+              </Field>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Logística = combustível + depreciação + manutenção, calculada automaticamente em cada plantão.
+            </p>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Logística = combustível + depreciação + manutenção, calculada automaticamente em cada plantão.
-          </p>
-        </div>
+        )}
       </Section>
     );
   }
