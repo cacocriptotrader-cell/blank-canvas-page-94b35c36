@@ -84,13 +84,19 @@ function OnboardingGate() {
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('OnboardingGate: Initializing...');
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('OnboardingGate: Session fetched', { session: !!session, error });
       setSession(session);
       if (session) {
         checkOnboarding(session.user.id);
       } else {
+        console.log('OnboardingGate: No session, setting loading to false');
         setLoading(false);
       }
+    }).catch(err => {
+      console.error('OnboardingGate: Error fetching session', err);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -106,14 +112,25 @@ function OnboardingGate() {
   }, []);
 
   async function checkOnboarding(userId: string) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarding_completed")
-      .eq("id", userId)
-      .single();
-    
-    setOnboardingCompleted(!!profile?.onboarding_completed);
-    setLoading(false);
+    console.log('OnboardingGate: Checking onboarding for', userId);
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", userId)
+        .single();
+      
+      if (error) {
+        console.error('OnboardingGate: Error fetching profile', error);
+      }
+      
+      console.log('OnboardingGate: Profile data', profile);
+      setOnboardingCompleted(!!profile?.onboarding_completed);
+    } catch (err) {
+      console.error('OnboardingGate: Exception in checkOnboarding', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Rota dedicada de impressão: bypass total (sem onboarding, sem shell).

@@ -8,6 +8,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  console.log('LoginPage: Rendering...');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
