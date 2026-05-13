@@ -9,6 +9,8 @@ import {
   isAboveIRPFExemption,
   IRPF_EXEMPTION_MONTHLY,
   estimateAnnualIRPF2026,
+  calculatePGBLAdvantage,
+  isPJFocused,
 } from "@/lib/store";
 import { Section } from "@/components/Section";
 import {
@@ -47,6 +49,31 @@ function Future() {
 }
 
 // =================== SMART ALLOCATOR ===================
+function PGBLInsightCard() {
+  const store = useStore();
+  const pgblAdvantage = calculatePGBLAdvantage(store);
+
+  if (!pgblAdvantage.hasAdvantage && !pgblAdvantage.isPJOnly) {
+    return null; // Não mostra o card se não há vantagem e não é focado em PJ
+  }
+
+  return (
+    <div className="mt-8 p-4 bg-gradient-to-br from-emerald-900/50 to-zinc-900/50 border border-emerald-500/20 rounded-xl shadow-lg">
+      <div className="flex items-center gap-3 mb-3">
+        <Sparkles className="h-5 w-5 text-emerald-400" />
+        <h3 className="text-lg font-semibold text-emerald-300">Insight: Otimização PGBL</h3>
+      </div>
+      <p className="text-zinc-200 text-sm leading-relaxed">
+        {pgblAdvantage.isPJOnly ? (
+          <>Como a sua operação é focada em PJ (lucros isentos), o PGBL não traz benefício fiscal. Concentre os seus aportes em CDB/LCI.</>
+        ) : (
+          <>Com o seu volume de plantões RPA/CLT, investir até <strong className="text-emerald-300">{brl(pgblAdvantage.idealLimit)}</strong> em PGBL este ano garante uma restituição de <strong className="text-emerald-300">{brl(pgblAdvantage.taxSavings)}</strong>. Para valores acima disso, utilize CDB.</>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function SmartAllocator() {
   const store = useStore();
   const global = globalIncomeMonthly(store);
@@ -157,6 +184,9 @@ function SmartAllocator() {
             <>Sua renda mensal global ({brl(global || 0)}) está abaixo da faixa de IRPF ({brl(IRPF_EXEMPTION_MONTHLY)}) — o bucket PGBL fica indisponível pois não há IR a abater.</>
           )}
         </p>
+
+        {/* PGBL Insight Card */}
+        <PGBLInsightCard />
 
         {/* Veredito de Máquina */}
         <div className="mt-8 space-y-2">

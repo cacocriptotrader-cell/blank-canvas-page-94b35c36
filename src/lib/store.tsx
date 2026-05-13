@@ -863,6 +863,47 @@ export const brl2 = (n: number) =>
  * Soma mensal de TODAS as fontes ativas de renda do médico (PJ + CLT + RPA + Particular).
  * Base usada para cálculo de IRPF — Fator R continua olhando apenas faturamento PJ.
  */
+export function getAnnualPFCLTIncome(s: StoreState): number {
+  const tp = s.taxProfile;
+  if (!tp || !tp.completed) return 0;
+  const monthlyPFCLT = (Object.keys(tp.sources) as IncomeSourceKind[])
+    .filter((k) => k === "RPA" || k === "CLT")
+    .reduce((acc, k) => acc + (tp.sources[k].enabled ? (tp.sources[k].monthly || 0) : 0), 0);
+  return monthlyPFCLT * 12;
+}
+
+export function isPJFocused(s: StoreState): boolean {
+  const tp = s.taxProfile;
+  if (!tp || !tp.completed) return true; // Default to PJ focused if no tax profile or not completed
+  const hasPJ = tp.sources.PJ.enabled && tp.sources.PJ.monthly > 0;
+  const hasPFCLT = (tp.sources.RPA.enabled && tp.sources.RPA.monthly > 0) || (tp.sources.CLT.enabled && tp.sources.CLT.monthly > 0);
+  return hasPJ && !hasPFCLT; // Considered PJ focused if has PJ income but no PF/CLT income
+}
+
+export interface PGBLAdvantage {
+  hasAdvantage: boolean;
+  idealLimit: number;
+  taxSavings: number;
+  isPJOnly: boolean;
+}
+
+export function calculatePGBLAdvantage(s: StoreState): PGBLAdvantage {
+  const annualPFCLTIncome = getAnnualPFCLTIncome(s);
+  const isPJOnly = isPJFocused(s);
+
+  if (isPJOnly) {
+    return { hasAdvantage: false, idealLimit: 0, taxSavings: 0, isPJOnly: true };
+  }
+
+  if (annualPFCLTIncome > 60000) { // Faixa dos 27,5% de IR
+    const idealLimit = round2(annualPFCLTIncome * 0.12);
+    const taxSavings = round2(idealLimit * 0.275);
+    return { hasAdvantage: true, idealLimit, taxSavings, isPJOnly: false };
+  } else {
+    return { hasAdvantage: false, idealLimit: 0, taxSavings: 0, isPJOnly: false };
+  }
+}
+
 export function globalIncomeMonthly(s: StoreState): number {
   const tp = s.taxProfile;
   if (!tp || !tp.completed) return 0;
