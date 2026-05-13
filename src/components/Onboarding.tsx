@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useStore, type CareerMoment } from "@/lib/store";
-import { ArrowRight, Command, User, Stethoscope, MapPin, Loader2 } from "lucide-react";
+import { useStore, type TrainingLevel } from "@/lib/store";
+import { ArrowRight, Command, User, Stethoscope, MapPin, Loader2, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export function Onboarding() {
@@ -8,7 +8,8 @@ export function Onboarding() {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
-  const [careerMoment, setCareerMoment] = useState<CareerMoment>("Médico Especialista");
+  const [trainingLevel, setTrainingLevel] = useState<TrainingLevel>("Médico Generalista");
+  const [specialtyName, setSpecialtyName] = useState("");
   const [baseAddress, setBaseAddress] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -26,6 +27,8 @@ export function Onboarding() {
       if (abortController.current) abortController.current.abort();
     };
   }, []);
+
+  const showSpecialty = ["Pós-Graduando", "Residente", "Especialista (com RQE)"].includes(trainingLevel);
 
   function searchPlaces(q: string) {
     setBaseAddress(q);
@@ -87,7 +90,8 @@ export function Onboarding() {
         const { error } = await supabase.from("profiles").upsert({
           id: user.id,
           full_name: fullName,
-          specialty: careerMoment,
+          training_level: trainingLevel,
+          specialty_name: showSpecialty ? specialtyName : null,
           base_address: baseAddress,
           onboarding_completed: true,
           updated_at: new Date().toISOString(),
@@ -95,7 +99,7 @@ export function Onboarding() {
 
         if (error) throw error;
 
-        updateUserProfile({ fullName, careerMoment, baseAddress });
+        updateUserProfile({ fullName, trainingLevel, specialtyName: showSpecialty ? specialtyName : undefined, baseAddress });
         if (lat !== null && lng !== null) {
           setBase({ label: baseAddress, lat, lng });
         }
@@ -110,7 +114,7 @@ export function Onboarding() {
     }
   }
 
-  const isStep2Valid = fullName.trim() !== "" && baseAddress.trim() !== "";
+  const isStep2Valid = fullName.trim() !== "" && baseAddress.trim() !== "" && (!showSpecialty || specialtyName.trim() !== "");
 
   return (
     <div className="min-h-screen flex items-center justify-center px-5 bg-zinc-950 text-white">
@@ -165,18 +169,35 @@ export function Onboarding() {
 
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">
-                  <Stethoscope className="h-3 w-3" /> Especialidade ou Momento
+                  <GraduationCap className="h-3 w-3" /> Nível de Formação
                 </label>
                 <select
-                  value={careerMoment}
-                  onChange={(e) => setCareerMoment(e.target.value as CareerMoment)}
+                  value={trainingLevel}
+                  onChange={(e) => setTrainingLevel(e.target.value as TrainingLevel)}
                   className="w-full bg-zinc-900 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-white/20 transition-colors appearance-none"
                 >
-                  <option value="Estudante/Cursinho">Estudante/Cursinho</option>
+                  <option value="Acadêmico de Medicina">Acadêmico de Medicina</option>
+                  <option value="Médico Generalista">Médico Generalista</option>
+                  <option value="Pós-Graduando">Pós-Graduando</option>
                   <option value="Residente">Residente</option>
-                  <option value="Médico Especialista">Médico Especialista</option>
+                  <option value="Especialista (com RQE)">Especialista (com RQE)</option>
                 </select>
               </div>
+
+              {showSpecialty && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">
+                    <Stethoscope className="h-3 w-3" /> Área de Especialidade
+                  </label>
+                  <input
+                    type="text"
+                    value={specialtyName}
+                    onChange={(e) => setSpecialtyName(e.target.value)}
+                    placeholder="Ex: Anestesiologia, Cardiologia, Dermatologia..."
+                    className="w-full bg-zinc-900 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-white/20 transition-colors"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2 relative">
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">

@@ -249,11 +249,17 @@ export interface Vehicle {
   maintenancePerKm: number;
 }
 
-export type CareerMoment = "Estudante/Cursinho" | "Residente" | "Médico Especialista";
+export type TrainingLevel =
+  | "Acadêmico de Medicina"
+  | "Médico Generalista"
+  | "Pós-Graduando"
+  | "Residente"
+  | "Especialista (com RQE)";
 
 export interface UserProfile {
   fullName: string;
-  careerMoment: CareerMoment;
+  trainingLevel: TrainingLevel;
+  specialtyName?: string;
   baseAddress: string;
 }
 
@@ -326,7 +332,8 @@ const initialState: StoreState = {
   hasCompletedOnboarding: false,
   userProfile: {
     fullName: "",
-    careerMoment: "Médico Especialista",
+    trainingLevel: "Médico Generalista",
+    specialtyName: "",
     baseAddress: "Casa",
   },
   taxProfile: emptyTaxProfile(),
