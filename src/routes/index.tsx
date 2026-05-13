@@ -274,7 +274,7 @@ function Dashboard() {
             <DecisionCard
               tone="warning"
               icon={<Scale className="h-5 w-5" />}
-              title={`Suba pró-labore para ${brl((data.pjRevenue12m * 0.28) / 12)}/mês`}
+              title={`Suba pró-labore para ${brl(data.pjRevenueMonth * 0.28)}/mês`}
               body={
                 <>Fator R está em <strong>{data.factorR.toFixed(1)}%</strong> — voltando ao Anexo III economiza{" "}
                 <strong className="text-success">{brl(factorRSavingsMonthly)}</strong>/mês de imposto.</>
@@ -384,8 +384,8 @@ function Dashboard() {
             {data.hasPj && (
               <FactorRCard
                 factorR={data.factorR}
-                pjRevenue={data.pjRevenue12m}
-                proLabore12m={data.proLabore12m}
+                pjRevenue={data.pjRevenueMonth * 12}
+                proLabore12m={data.proLaboreMonthly * 12}
                 monthlySavings={factorRSavingsMonthly}
               />
             )}
