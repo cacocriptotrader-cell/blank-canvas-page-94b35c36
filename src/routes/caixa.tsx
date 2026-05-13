@@ -86,7 +86,62 @@ function CashFlow() {
 
   const max = Math.max(1, ...groups.map((g) => g.total));
 
+  const billingByMonth = useMemo(() => {
+    const map = new Map<string, { label: string; date: Date; total: number; items: { id: string; date: string; hospital: string; regimeLabel: string; gross: number }[] }>();
+    store.shifts.forEach((s) => {
+      const wp = store.workplaces.find((w) => w.id === s.workplaceId);
+      const d = new Date(s.date + "T12:00:00");
+      const k = monthKey(d);
+      const ref = new Date(d.getFullYear(), d.getMonth(), 1);
+      const cur = map.get(k) ?? { label: monthLabel(ref), date: ref, total: 0, items: [] };
+      cur.total += s.gross;
+      cur.items.push({
+        id: s.id,
+        date: s.date,
+        hospital: wp?.name ?? "—",
+        regimeLabel: wp ? TAX_LABELS[wp.regime] : "—",
+        gross: s.gross,
+      });
+      map.set(k, cur);
+    });
+    return [...map.entries()]
+      .sort((a, b) => b[1].date.getTime() - a[1].date.getTime())
+      .map(([k, v]) => ({ key: k, ...v, items: v.items.sort((a, b) => b.date.localeCompare(a.date)) }));
+  }, [store.shifts, store.workplaces]);
+  const [openBillingMonth, setOpenBillingMonth] = useState<string | null>(null);
+
+  function exportCSV() {
+    const headers = ["Data", "Hospital", "Regime", "Horas", "Bruto"];
+    const rows = store.shifts
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map((s) => {
+        const wp = store.workplaces.find((w) => w.id === s.workplaceId);
+        const cells = [
+          fmtDate(new Date(s.date + "T12:00:00")),
+          wp?.name ?? "—",
+          wp ? TAX_LABELS[wp.regime] : "—",
+          String(s.hours),
+          s.gross.toFixed(2).replace(".", ","),
+        ];
+        return cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",");
+      });
+    const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-plantoes-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setToast("Relatório CSV exportado com sucesso");
+    setTimeout(() => setToast(null), 2400);
+  }
+
   function exportReport(kind: "pdf" | "csv") {
+    if (kind === "csv") return exportCSV();
     setToast(`Relatório ${kind.toUpperCase()} gerado com sucesso`);
     setTimeout(() => setToast(null), 2400);
   }
