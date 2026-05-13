@@ -407,7 +407,7 @@ function Manage() {
     const [lng, setLng] = useState<number | null>(null);
 
     const [regime, setRegime] = useState<TaxRegime>("PJ_SIMPLES");
-    const [paymentRule, setPaymentRule] = useState<PaymentRule>("FIFTH_BUSINESS_DAY");
+    const [paymentRule, setPaymentRule] = useState<PaymentRule>("");
     const [cutOffDay, setCutOffDay] = useState(20);
     const [paymentDay, setPaymentDay] = useState(5);
     const [paymentTermDays, setPaymentTermDays] = useState(15);
@@ -506,17 +506,16 @@ function Manage() {
                   <div className="flex flex-wrap gap-1 mt-1">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary">{TAX_LABELS[w.regime]}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground inline-flex items-center gap-1">
-                      <CalendarClock className="h-2.5 w-2.5" /> {PAYMENT_RULE_LABELS[w.paymentRule]}
+                      <CalendarClock className="h-2.5 w-2.5" /> {PAYMENT_RULE_LABELS[w.paymentRule] || w.paymentRule}
                     </span>
                   </div>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Ex: Todo dia 15, ou 45 dias após a nota"
                     value={w.paymentRule}
-                    onChange={(e) => s.updateWorkplace(w.id, { paymentRule: e.target.value as PaymentRule })}
-                    className={inp + " mt-2 text-[11px]"}>
-                    {Object.entries(PAYMENT_RULE_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
+                    onChange={(e) => s.updateWorkplace(w.id, { paymentRule: e.target.value })}
+                    className={inp + " mt-2 text-[11px]"}
+                  />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <label className="block">
                       <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Corte (dia)</span>
@@ -595,11 +594,13 @@ function Manage() {
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <CalendarClock className="h-3 w-3" /> Regra de pagamento
             </span>
-            <select value={paymentRule} onChange={(e) => setPaymentRule(e.target.value as PaymentRule)} className={inp}>
-              {Object.entries(PAYMENT_RULE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              placeholder="Ex: Todo dia 15, ou 45 dias após a nota"
+              value={paymentRule}
+              onChange={(e) => setPaymentRule(e.target.value)}
+              className={inp}
+            />
           </label>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Dia de Fechamento/Corte *">

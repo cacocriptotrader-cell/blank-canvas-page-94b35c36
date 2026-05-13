@@ -10,13 +10,7 @@ export type TaxRegime =
   | "RPA"
   | "PARTICULAR_PIX"
   | "SCP";
-export type PaymentRule =
-  | "FIFTH_BUSINESS_DAY"
-  | "TENTH_DAY"
-  | "FIFTEENTH_DAY"
-  | "END_OF_MONTH"
-  | "NEXT_MONTH_FIFTH"
-  | "INSTANT_D0";
+export type PaymentRule = string;
 
 export const TAX_LABELS: Record<TaxRegime, string> = {
   PF: "PF (RPA) — IRPF progressivo",
@@ -28,7 +22,9 @@ export const TAX_LABELS: Record<TaxRegime, string> = {
   SCP: "Sociedade (SCP)",
 };
 
-export const PAYMENT_RULE_LABELS: Record<PaymentRule, string> = {
+// PAYMENT_RULE_LABELS is deprecated as PaymentRule is now a free text field.
+// Keeping it as a reference for existing data if needed, but it's no longer used for UI selection.
+export const PAYMENT_RULE_LABELS: Record<string, string> = {
   FIFTH_BUSINESS_DAY: "5º dia útil do mês seguinte",
   TENTH_DAY: "Dia 10 do mês seguinte",
   FIFTEENTH_DAY: "Dia 15 do mês seguinte",
