@@ -244,10 +244,10 @@ function SurgeryForm() {
   const [regimeOverride, setRegimeOverride] = useState<TaxRegime | null>(null);
   const effectiveRegime: TaxRegime = regimeOverride ?? (hospital?.regime ?? "PJ_SIMPLES");
   useMemo(() => { setRegimeOverride(null); }, [hospitalId]);
-  const taxRate = taxBase > 0 ? computeTaxForRegime(taxBase, effectiveRegime, store) / taxBase : 0;
   const teamTotal = team.reduce((a, m) => a + (m.amountDue || 0), 0);
   const myShareTitular = Math.max(0, totalGross - teamTotal);
   const taxBase = invoiceMode === "SINGLE" ? totalGross : myShareTitular;
+  const taxRate = taxBase > 0 ? computeTaxForRegime(taxBase, effectiveRegime, store) / taxBase : 0;
   const taxEstimated = computeTaxForRegime(taxBase, effectiveRegime, store);
   const myNet = myShareTitular - taxEstimated;
 
