@@ -407,9 +407,7 @@ function Manage() {
     const [lng, setLng] = useState<number | null>(null);
 
     const [regime, setRegime] = useState<TaxRegime>("PJ_SIMPLES");
-    const [paymentRule, setPaymentRule] = useState<PaymentRule>("");
     const [cutOffDay, setCutOffDay] = useState(20);
-    const [paymentDay, setPaymentDay] = useState(5);
     const [paymentTermDays, setPaymentTermDays] = useState(15);
     const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string; class?: string; type?: string }>>([]);
     const [searching, setSearching] = useState(false);
@@ -490,7 +488,7 @@ function Manage() {
       // Se o usuário digitou e não escolheu sugestão, usa um fallback (centro de SP) — mantém compatibilidade.
       const finalLat = lat ?? -23.55 + (Math.random() - 0.5) * 0.05;
       const finalLng = lng ?? -46.65 + (Math.random() - 0.5) * 0.05;
-      s.addWorkplace({ name, address, lat: finalLat, lng: finalLng, regime, hourlyRate: 0, paymentRule, cutOffDay, paymentDay, paymentTermDays });
+      s.addWorkplace({ name, address, lat: finalLat, lng: finalLng, regime, hourlyRate: 0, paymentRule: "", cutOffDay, paymentDay: 0, paymentTermDays });
       setName(""); setAddress(""); setLat(null); setLng(null); setSuggestions([]);
     }
     return (
@@ -505,18 +503,11 @@ function Manage() {
                   <p className="text-[11px] text-muted-foreground truncate">{w.address}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary">{TAX_LABELS[w.regime]}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground inline-flex items-center gap-1">
-                      <CalendarClock className="h-2.5 w-2.5" /> {PAYMENT_RULE_LABELS[w.paymentRule] || w.paymentRule}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/20 text-slate-400 inline-flex items-center gap-1">
+                      <CalendarClock className="h-2.5 w-2.5" /> Corte: Dia {w.cutOffDay} | Recebimento: +{w.paymentTermDays} dias
                     </span>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Ex: Todo dia 15, ou 45 dias após a nota"
-                    value={w.paymentRule}
-                    onChange={(e) => s.updateWorkplace(w.id, { paymentRule: e.target.value })}
-                    className={inp + " mt-2 text-[11px]"}
-                  />
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="grid grid-cols-2 gap-2 mt-3">
                     <label className="block">
                       <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Corte (dia)</span>
                       <input type="number" min={1} max={31} value={w.cutOffDay}
@@ -524,9 +515,9 @@ function Manage() {
                         className={inp + " text-[11px] tabular-nums"} />
                     </label>
                     <label className="block">
-                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Pagamento (dia)</span>
-                      <input type="number" min={1} max={31} value={w.paymentDay}
-                        onChange={(e) => s.updateWorkplace(w.id, { paymentDay: Math.max(1, Math.min(31, +e.target.value || 5)) })}
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Prazo (dias)</span>
+                      <input type="number" min={1} max={180} value={w.paymentTermDays}
+                        onChange={(e) => s.updateWorkplace(w.id, { paymentTermDays: Math.max(1, Math.min(180, +e.target.value || 15)) })}
                         className={inp + " text-[11px] tabular-nums"} />
                     </label>
                   </div>
@@ -590,19 +581,7 @@ function Manage() {
               ))}
             </select>
           </Field>
-          <label className="block">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
-              <CalendarClock className="h-3 w-3" /> Regra de pagamento
-            </span>
-            <input
-              type="text"
-              placeholder="Ex: Todo dia 15, ou 45 dias após a nota"
-              value={paymentRule}
-              onChange={(e) => setPaymentRule(e.target.value)}
-              className={inp}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Dia de Fechamento/Corte *">
               <input type="number" min={1} max={31} required value={cutOffDay}
                 onChange={(e) => setCutOffDay(Math.max(1, Math.min(31, +e.target.value || 20)))}
@@ -614,13 +593,8 @@ function Manage() {
                 className={inp} placeholder="Ex: 15" />
             </Field>
           </div>
-          <Field label="Dia do pagamento (referência mensal)">
-            <input type="number" min={1} max={31} value={paymentDay}
-              onChange={(e) => setPaymentDay(Math.max(1, Math.min(31, +e.target.value || 5)))}
-              className={inp} />
-          </Field>
-          <p className="text-[10px] text-muted-foreground -mt-1">
-            Plantões realizados até o dia <strong>{cutOffDay}</strong> entram no fechamento do mês; o pagamento ocorre <strong>{paymentTermDays} dias</strong> após o envio da nota.
+          <p className="text-sm text-slate-400 mt-1">
+            Plantões realizados até o dia <strong>{cutOffDay}</strong> serão pagos aproximadamente <strong>{paymentTermDays}</strong> dias após o fechamento.
           </p>
           <button onClick={add} className="w-full rounded-lg py-2.5 text-sm font-medium text-primary-foreground inline-flex items-center justify-center gap-2"
                   style={{ background: "var(--gradient-primary)" }}>
