@@ -600,8 +600,36 @@ function Manage() {
   function FixedCard() {
     const [label, setLabel] = useState("");
     const [monthly, setMonthly] = useState(0);
+    const [importing, setImporting] = useState(false);
+
+    async function handleImport() {
+      setImporting(true);
+      await new Promise((r) => setTimeout(r, 2000));
+      s.addFixedCost({ label: "CRM", monthly: 800 });
+      s.addFixedCost({ label: "Contabilidade", monthly: 400 });
+      s.addFixedCost({ label: "Seguro", monthly: 350 });
+      setImporting(false);
+    }
+
     return (
-      <Section title="Custos fixos mensais" subtitle={`Total: ${brl2(monthlyFixedTotal(s))}/mês`}>
+      <Section
+        title="Custos fixos mensais"
+        subtitle={`Total: ${brl2(monthlyFixedTotal(s))}/mês`}
+        action={
+          <button
+            onClick={handleImport}
+            disabled={importing}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 transition disabled:opacity-50"
+          >
+            {importing ? (
+              <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <FileDown className="h-3.5 w-3.5" />
+            )}
+            Importar Fatura (Beta)
+          </button>
+        }
+      >
         <div className="glass-card rounded-2xl p-3 mb-3 divide-y divide-border">
           {s.fixedCosts.map((c) => (
             <div key={c.id} className="p-3 flex items-center justify-between">
