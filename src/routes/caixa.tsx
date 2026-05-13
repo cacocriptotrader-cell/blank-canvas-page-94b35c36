@@ -141,7 +141,13 @@ function CashFlow() {
   }
 
   function handleDownloadPDF() {
-    window.print();
+    document.body.classList.add("print-ledger");
+    const cleanup = () => {
+      document.body.classList.remove("print-ledger");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    setTimeout(() => window.print(), 50);
   }
 
   return (
