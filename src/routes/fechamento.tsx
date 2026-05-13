@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useStore, brl2, generateMonthlyReport } from "@/lib/store";
 import { Section } from "@/components/Section";
-import { Printer, FileSpreadsheet, Command } from "lucide-react";
+import { FileSpreadsheet, Command } from "lucide-react";
 
 export const Route = createFileRoute("/fechamento")({
   head: () => ({
@@ -38,13 +38,9 @@ function Fechamento() {
           title="Exportação Contábil"
           subtitle="Fechamento mensal automático — pronto para enviar ao seu contador"
           action={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-foreground text-background text-xs font-semibold hover:bg-foreground/90 transition"
-            >
-              <Printer className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Gerar Dossiê para o Contador
-            </button>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Dossiê Contábil
+            </div>
           }
         >
           <div className="glass-card rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3">
@@ -126,78 +122,7 @@ function Fechamento() {
         </Section>
       </div>
 
-      {/* Printable area — only visible in print */}
-      <div className="print-area" aria-hidden="true">
-        <div className="doc-header">
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <Command size={16} strokeWidth={2.5} />
-              <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em" }}>Docfin Wealth</span>
-            </div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Dossiê Contábil — {monthLabel}</h1>
-            <p style={{ fontSize: 10, margin: "2px 0 0" }}>Documento gerado automaticamente para fins contábeis.</p>
-          </div>
-          <div style={{ textAlign: "right", fontSize: 10 }}>
-            <p style={{ margin: 0 }}>Emitido em: {generatedAt}</p>
-            <p style={{ margin: 0 }}>Período: {String(month).padStart(2, "0")}/{year}</p>
-          </div>
-        </div>
 
-        <h2 style={{ fontSize: 13, margin: "0 0 8px" }}>1. Resumo por Regime Tributário</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Regime</th>
-              <th style={{ textAlign: "right" }}>Operações</th>
-              <th style={{ textAlign: "right" }}>Faturamento Bruto (R$)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(report.byRegime).map(([k, v]) => (
-              <tr key={k}>
-                <td>{v.label}</td>
-                <td style={{ textAlign: "right" }}>{v.count}</td>
-                <td style={{ textAlign: "right" }}>{brl2(v.gross)}</td>
-              </tr>
-            ))}
-            <tr>
-              <td style={{ fontWeight: 700 }}>TOTAL</td>
-              <td style={{ textAlign: "right", fontWeight: 700 }}>{report.totalShifts + report.totalSurgeries}</td>
-              <td style={{ textAlign: "right", fontWeight: 700 }}>{brl2(report.totalGross)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <h2 style={{ fontSize: 13, margin: "20px 0 8px" }}>2. Detalhamento por Hospital / Pagador</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Hospital / Pagador (CNPJ)</th>
-              <th>Regime</th>
-              <th style={{ textAlign: "right" }}>Plantões</th>
-              <th style={{ textAlign: "right" }}>Cirurgias</th>
-              <th style={{ textAlign: "right" }}>Bruto (R$)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.rows.map((r) => (
-              <tr key={`${r.workplaceId}-${r.regime}`}>
-                <td>{r.workplaceName}</td>
-                <td>{report.byRegime[r.regime]?.label ?? r.regime}</td>
-                <td style={{ textAlign: "right" }}>{r.shiftsCount}</td>
-                <td style={{ textAlign: "right" }}>{r.surgeriesCount}</td>
-                <td style={{ textAlign: "right" }}>{brl2(r.gross)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="doc-footer">
-          <p style={{ margin: 0 }}>
-            Docfin — Plataforma de Gestão Patrimonial Médica · Documento sem valor fiscal · Conferir com notas e extratos bancários.
-          </p>
-        </div>
-      </div>
     </>
   );
 }

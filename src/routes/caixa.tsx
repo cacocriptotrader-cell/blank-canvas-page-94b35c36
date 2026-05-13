@@ -4,6 +4,8 @@ import {
   useStore, computeShift, computePaymentDate, calculateExpectedPaymentDate, didSkipCycle, monthKey, monthLabel, fmtDate,
   brl, brl2, PAYMENT_RULE_LABELS, TAX_LABELS,
 } from "@/lib/store";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 import { Section } from "@/components/Section";
 import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap, Download, Calendar as CalendarIcon, Building2 } from "lucide-react";
 import { ShiftHandoffModal } from "@/components/ShiftHandoffModal";
@@ -141,13 +143,57 @@ function CashFlow() {
   }
 
   function handleDownloadPDF() {
-    document.body.classList.add("print-ledger");
-    const cleanup = () => {
-      document.body.classList.remove("print-ledger");
-      window.removeEventListener("afterprint", cleanup);
-    };
-    window.addEventListener("afterprint", cleanup);
-    setTimeout(() => window.print(), 50);
+    const doc = new jsPDF();
+    const now = new Date();
+    const generatedAt = now.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+    // Design do Documento (Padrão Wealth Management)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text("DOCFIN - WEALTH MANAGEMENT", 14, 20);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Extrato de Plantões e Rendimentos", 14, 28);
+
+    // Período correspondente ao mês que o utilizador está a visualizar
+    const activeMonth = billingByMonth.find(m => m.key === openBillingMonth) || billingByMonth[0];
+    const periodLabel = activeMonth ? activeMonth.label : monthLabel(now);
+    doc.setFontSize(10);
+    doc.text(`Período: ${periodLabel}`, 14, 35);
+    doc.text(`Emitido em: ${generatedAt}`, 14, 40);
+
+    // Construção da Tabela (autotable)
+    const tableData = (activeMonth?.items || []).map(it => [
+      fmtDate(new Date(it.date + "T12:00:00")),
+      it.hospital,
+      it.regimeLabel,
+      brl2(it.gross)
+    ]);
+
+    // Adicione uma linha final com a soma do "TOTAL GERAL" do mês
+    const totalGross = activeMonth?.total || 0;
+
+    (doc as any).autoTable({
+      startY: 45,
+      head: [['Data', 'Hospital', 'Regime Tributário', 'Valor Bruto']],
+      body: tableData,
+      foot: [['', '', 'TOTAL GERAL', brl2(totalGross)]],
+      theme: 'striped',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        3: { halign: 'right' }
+      }
+    });
+
+    const fileName = `Extrato_Docfin_${periodLabel.replace(/\s+/g, '_')}.pdf`;
+    doc.save(fileName);
+    setToast("PDF gerado com sucesso");
+    setTimeout(() => setToast(null), 2400);
   }
 
   return (
@@ -170,7 +216,7 @@ function CashFlow() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-5 no-print">
+          <div className="grid grid-cols-2 gap-2 mt-5">
             <button onClick={handleDownloadPDF}
               className="rounded-xl py-3 text-sm font-medium text-primary-foreground inline-flex items-center justify-center gap-2"
               style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
@@ -187,10 +233,7 @@ function CashFlow() {
         </div>
       </Section>
 
-      <div className="print-area">
-        <div className="hidden print:block print:text-center print:font-bold print:mb-6 print:text-2xl">
-          DOCFIN — Extrato de Rendimentos Mensais
-        </div>
+      <div>
       <Section title="Faturamento por Mês" subtitle="Plantões agrupados pela data de execução · valores brutos">
         <div className="space-y-2">
           {billingByMonth.length === 0 && (

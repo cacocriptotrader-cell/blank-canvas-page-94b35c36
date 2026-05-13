@@ -19,14 +19,7 @@ function Manage() {
   const s = useStore();
   return (
     <>
-      <div className="px-5 pt-2 flex items-center justify-between gap-2">
-        <button
-          onClick={() => window.open("/imprimir-relatorio", "_blank")}
-          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-primary-foreground"
-          style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
-        >
-          <FileDown className="h-3.5 w-3.5" /> Exportar Dossiê PDF
-        </button>
+      <div className="px-5 pt-2 flex items-center justify-end gap-2">
         <button
           onClick={s.resetOnboarding}
           className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"

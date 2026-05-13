@@ -26,9 +26,9 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground print:h-auto print:min-h-0 print:overflow-visible">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Top Navigation — minimal, single border-b */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border print:hidden">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-7xl mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <Link to="/" className="flex items-center gap-2 group">
