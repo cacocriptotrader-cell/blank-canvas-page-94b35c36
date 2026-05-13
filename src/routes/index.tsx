@@ -384,8 +384,8 @@ function Dashboard() {
             {data.hasPj && (
               <FactorRCard
                 factorR={data.factorR}
-                pjRevenue={data.pjRevenue12m}
-                proLabore12m={data.proLabore12m}
+                pjRevenue={data.pjRevenueMonth * 12}
+                proLabore12m={data.proLaboreMonthly * 12}
                 monthlySavings={factorRSavingsMonthly}
               />
             )}
