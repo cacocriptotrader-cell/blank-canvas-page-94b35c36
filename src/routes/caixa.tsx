@@ -244,6 +244,7 @@ function CashFlow() {
           })}
         </div>
       </Section>
+      </div>
 
       <Section title="Contas a receber" subtitle="Linha do tempo · clique no mês para detalhar">
         <div className="space-y-2">
