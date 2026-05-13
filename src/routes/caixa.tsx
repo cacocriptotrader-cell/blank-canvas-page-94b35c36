@@ -4,8 +4,8 @@ import {
   useStore, computeShift, computePaymentDate, calculateExpectedPaymentDate, didSkipCycle, monthKey, monthLabel, fmtDate,
   brl, brl2, PAYMENT_RULE_LABELS, TAX_LABELS,
 } from "@/lib/store";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Section } from "@/components/Section";
 import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap, Download, Calendar as CalendarIcon, Building2 } from "lucide-react";
 import { ShiftHandoffModal } from "@/components/ShiftHandoffModal";
@@ -176,7 +176,7 @@ function CashFlow() {
     // Adicione uma linha final com a soma do "TOTAL GERAL" do mês
     const totalGross = activeMonth?.total || 0;
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 45,
       head: [['Data', 'Hospital', 'Regime Tributário', 'Valor Bruto']],
       body: tableData,
