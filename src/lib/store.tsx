@@ -253,8 +253,8 @@ export type CareerMoment = "Estudante/Cursinho" | "Residente" | "Médico Especia
 
 export interface UserProfile {
   fullName: string;
-  city: string;
   careerMoment: CareerMoment;
+  baseAddress: string;
 }
 
 export interface StoreState {
@@ -326,8 +326,8 @@ const initialState: StoreState = {
   hasCompletedOnboarding: false,
   userProfile: {
     fullName: "",
-    city: "",
     careerMoment: "Médico Especialista",
+    baseAddress: "Casa",
   },
   taxProfile: emptyTaxProfile(),
   base: { label: "Casa", lat: -23.55, lng: -46.63 },

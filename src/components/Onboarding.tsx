@@ -1,24 +1,91 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useStore, type CareerMoment } from "@/lib/store";
-import { ArrowRight, Command, User, MapPin, Briefcase } from "lucide-react";
+import { ArrowRight, Command, User, Stethoscope, MapPin } from "lucide-react";
 
 export function Onboarding() {
-  const { completeOnboarding, updateUserProfile } = useStore();
+  const { completeOnboarding, updateUserProfile, setBase } = useStore();
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState("");
-  const [city, setCity] = useState("");
   const [careerMoment, setCareerMoment] = useState<CareerMoment>("Médico Especialista");
+  const [baseAddress, setBaseAddress] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+
+  const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  const [searching, setSearching] = useState(false);
+  const [openSug, setOpenSug] = useState(false);
+  const [apiError, setApiError] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortController = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      if (abortController.current) abortController.current.abort();
+    };
+  }, []);
+
+  function searchPlaces(q: string) {
+    setBaseAddress(q);
+    setOpenSug(true);
+    setApiError(false);
+
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (abortController.current) abortController.current.abort();
+
+    if (q.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    setSearching(true);
+    abortController.current = new AbortController();
+
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(q)}`;
+        const r = await fetch(url, {
+          signal: abortController.current?.signal,
+          headers: { "Accept-Language": "pt-BR", "User-Agent": "Docfin/1.0" }
+        });
+
+        if (!r.ok) throw new Error("API request failed");
+
+        const data: Array<any> = await r.json();
+        setSuggestions(data);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("Address search error:", err);
+          setApiError(true);
+          setSuggestions([]);
+        }
+      } finally {
+        setSearching(false);
+      }
+    }, 500);
+  }
+
+  function pickSuggestion(item: { display_name: string; lat: string; lon: string }) {
+    setBaseAddress(item.display_name);
+    setLat(parseFloat(item.lat));
+    setLng(parseFloat(item.lon));
+    setOpenSug(false);
+    setSuggestions([]);
+  }
 
   function handleNext() {
     if (step === 1) {
       setStep(2);
     } else {
-      updateUserProfile({ fullName, city, careerMoment });
+      updateUserProfile({ fullName, careerMoment, baseAddress });
+      if (lat !== null && lng !== null) {
+        setBase({ label: baseAddress, lat, lng });
+      }
       completeOnboarding();
     }
   }
 
-  const isStep2Valid = fullName.trim() !== "" && city.trim() !== "";
+  const isStep2Valid = fullName.trim() !== "" && baseAddress.trim() !== "";
 
   return (
     <div className="min-h-screen flex items-center justify-center px-5 bg-zinc-950 text-white">
@@ -53,8 +120,8 @@ export function Onboarding() {
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="space-y-2 mb-8">
-              <h2 className="text-2xl font-semibold tracking-tight">Conhecer o seu perfil</h2>
-              <p className="text-sm text-zinc-500">Personalize a sua experiência no Docfin.</p>
+              <h2 className="text-2xl font-semibold tracking-tight">Configuração Inicial</h2>
+              <p className="text-sm text-zinc-500">Dados fundamentais para personalização e logística.</p>
             </div>
 
             <div className="space-y-5">
@@ -66,27 +133,14 @@ export function Onboarding() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Como gostaria de ser chamado?"
+                  placeholder="Ex: Dr. João Silva"
                   className="w-full bg-zinc-900 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-white/20 transition-colors"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">
-                  <MapPin className="h-3 w-3" /> Cidade de Atuação
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Ex: São Paulo, SP"
-                  className="w-full bg-zinc-900 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-white/20 transition-colors"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">
-                  <Briefcase className="h-3 w-3" /> Momento de Carreira
+                  <Stethoscope className="h-3 w-3" /> Especialidade ou Momento
                 </label>
                 <select
                   value={careerMoment}
@@ -98,6 +152,41 @@ export function Onboarding() {
                   <option value="Médico Especialista">Médico Especialista</option>
                 </select>
               </div>
+
+              <div className="space-y-2 relative">
+                <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium flex items-center gap-2">
+                  <MapPin className="h-3 w-3" /> Endereço Base / Residência
+                </label>
+                <input
+                  type="text"
+                  value={baseAddress}
+                  onChange={(e) => searchPlaces(e.target.value)}
+                  onFocus={() => setOpenSug(true)}
+                  placeholder="Digite seu endereço residencial"
+                  className="w-full bg-zinc-900 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-white/20 transition-colors"
+                  autoComplete="off"
+                />
+                {openSug && (suggestions.length > 0 || searching) && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-zinc-900 border border-white/10 rounded-xl max-h-48 overflow-auto shadow-2xl">
+                    {searching && <p className="p-3 text-[11px] text-zinc-500">Buscando...</p>}
+                    {!searching && suggestions.map((sug, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => pickSuggestion(sug)}
+                        className="w-full text-left px-4 py-3 text-xs hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors"
+                      >
+                        <p className="text-zinc-300 truncate">{sug.display_name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {apiError && (
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    API de mapas indisponível. Digite o endereço manualmente.
+                  </p>
+                )}
+              </div>
             </div>
 
             <button
@@ -105,7 +194,7 @@ export function Onboarding() {
               disabled={!isStep2Valid}
               className="w-full mt-10 inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-white text-black text-sm font-semibold hover:bg-zinc-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-200"
             >
-              Finalizar Perfil <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+              Finalizar Configuração <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </button>
           </div>
         )}
