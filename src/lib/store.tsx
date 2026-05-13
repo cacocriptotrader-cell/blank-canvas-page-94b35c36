@@ -249,8 +249,17 @@ export interface Vehicle {
   maintenancePerKm: number;
 }
 
+export type CareerMoment = "Estudante/Cursinho" | "Residente" | "Médico Especialista";
+
+export interface UserProfile {
+  fullName: string;
+  city: string;
+  careerMoment: CareerMoment;
+}
+
 export interface StoreState {
   hasCompletedOnboarding: boolean;
+  userProfile: UserProfile;
   taxProfile: TaxProfile;
   base: { label: string; lat: number; lng: number };
   vehicle: Vehicle;
@@ -304,6 +313,7 @@ export interface StoreActions {
   addLiability: (l: Omit<Liability, "id">) => void;
   removeLiability: (id: string) => void;
   setLiabilities: (l: Liability[]) => void;
+  updateUserProfile: (p: Partial<UserProfile>) => void;
 }
 
 type Store = StoreState & StoreActions;
@@ -314,6 +324,11 @@ const STORAGE_KEY = "docfin.store.v2";
 
 const initialState: StoreState = {
   hasCompletedOnboarding: false,
+  userProfile: {
+    fullName: "",
+    city: "",
+    careerMoment: "Médico Especialista",
+  },
   taxProfile: emptyTaxProfile(),
   base: { label: "Casa", lat: -23.55, lng: -46.63 },
   vehicle: {
@@ -922,6 +937,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addLiability: (l) => setState((p) => ({ ...p, liabilities: [...p.liabilities, { id: uid(), ...l }] })),
     removeLiability: (id) => setState((p) => ({ ...p, liabilities: p.liabilities.filter((l) => l.id !== id) })),
     setLiabilities: (liabilities) => setState((p) => ({ ...p, liabilities })),
+    updateUserProfile: (profile) => setState((p) => ({ ...p, userProfile: { ...p.userProfile, ...profile } })),
   };
 
   return <StoreContext.Provider value={{ ...state, ...actions }}>{children}</StoreContext.Provider>;
