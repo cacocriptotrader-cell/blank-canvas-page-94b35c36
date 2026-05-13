@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   brl,
+  brl2,
   useStore,
   monthlyFixedTotal,
   monthlyFixedIncomeNet,
@@ -48,32 +49,50 @@ function Future() {
   );
 }
 
-// =================== SMART ALLOCATOR ===================
+// =================== PGBL INSIGHT CARD ===================
 function PGBLInsightCard() {
   const store = useStore();
   const pgblAdvantage = calculatePGBLAdvantage(store);
 
-  if (!pgblAdvantage.hasAdvantage && !pgblAdvantage.isPJOnly) {
-    return null; // Não mostra o card se não há vantagem e não é focado em PJ
-  }
+  const renderScenario = () => {
+    switch (pgblAdvantage.scenario) {
+      case "A":
+        return (
+          <p className="text-zinc-200 text-sm leading-relaxed">
+            Insight: O seu volume de faturamento PF atual é melhor atendido pela Declaração Simplificada do IR. O PGBL não trará vantagem fiscal neste cenário. Concentre os seus aportes em CDB, LCI ou LCA.
+          </p>
+        );
+      case "B":
+        return (
+          <p className="text-zinc-200 text-sm leading-relaxed">
+            Insight: Atenção Fiscal. O seu faturamento PF atingiu a zona de transição para a Declaração Completa. Um aporte de até <strong className="text-emerald-300">{brl2(pgblAdvantage.idealLimit)}</strong> em PGBL pode otimizar a sua restituição. Analise com o seu contador.
+          </p>
+        );
+      case "C":
+        return (
+          <p className="text-zinc-200 text-sm leading-relaxed">
+            Insight: Oportunidade Fiscal. O seu volume de faturamento PF exige a Declaração Completa. Aportar o teto de <strong className="text-emerald-300">{brl2(pgblAdvantage.idealLimit)}</strong> em PGBL este ano garante uma economia direta de <strong className="text-emerald-300">{brl2(pgblAdvantage.taxSavings)}</strong> em impostos. Para valores acima desse teto, utilize CDB.
+          </p>
+        );
+    }
+  };
 
   return (
-    <div className="mt-8 p-4 bg-gradient-to-br from-emerald-900/50 to-zinc-900/50 border border-emerald-500/20 rounded-xl shadow-lg">
-      <div className="flex items-center gap-3 mb-3">
-        <Sparkles className="h-5 w-5 text-emerald-400" />
-        <h3 className="text-lg font-semibold text-emerald-300">Insight: Otimização PGBL</h3>
+    <div className="mt-8 p-5 bg-gradient-to-br from-slate-900/60 to-zinc-900/60 border border-slate-700/40 rounded-lg shadow-lg">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 pt-0.5">
+          <div className="flex items-center justify-center h-5 w-5 rounded-full bg-slate-700/50" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-slate-200 mb-2">Análise Fiscal Personalizada</h3>
+          {renderScenario()}
+        </div>
       </div>
-      <p className="text-zinc-200 text-sm leading-relaxed">
-        {pgblAdvantage.isPJOnly ? (
-          <>Como a sua operação é focada em PJ (lucros isentos), o PGBL não traz benefício fiscal. Concentre os seus aportes em CDB/LCI.</>
-        ) : (
-          <>Com o seu volume de plantões RPA/CLT, investir até <strong className="text-emerald-300">{brl(pgblAdvantage.idealLimit)}</strong> em PGBL este ano garante uma restituição de <strong className="text-emerald-300">{brl(pgblAdvantage.taxSavings)}</strong>. Para valores acima disso, utilize CDB.</>
-        )}
-      </p>
     </div>
   );
 }
 
+// =================== SMART ALLOCATOR ===================
 function SmartAllocator() {
   const store = useStore();
   const global = globalIncomeMonthly(store);
@@ -387,25 +406,36 @@ function FireSimulator() {
                       <stop offset="0%" stopColor="rgb(113 113 122)" stopOpacity={0.5} />
                       <stop offset="100%" stopColor="rgb(113 113 122)" stopOpacity={0.05} />
                     </linearGradient>
-                    <linearGradient id="gJuros" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity={0.05} />
+                    <linearGradient id="gInterest" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity={0.8} />
+                      <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="ageLabel" tick={{ fill: "rgb(161 161 170)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "rgb(161 161 170)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => compact(v)} width={55} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgb(39 39 42)" vertical={false} />
+                  <XAxis dataKey="ageLabel" tick={{ fontSize: 12, fill: "rgb(113 113 122)" }} />
+                  <YAxis tick={{ fontSize: 12, fill: "rgb(113 113 122)" }} />
                   <RTooltip
-                    contentStyle={{ background: "rgba(9,9,11,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                    labelStyle={{ color: "rgb(244 244 245)" }}
-                    formatter={((v: any, name: any) => [brl(Number(v)), name === "invested" ? "Aportado" : "Juros"]) as any}
-                    labelFormatter={(l) => `Aos ${l} anos`}
+                    contentStyle={{ backgroundColor: "rgb(24 24 27)", border: "1px solid rgb(63 63 70)" }}
+                    labelStyle={{ color: "rgb(212 212 216)" }}
+                    formatter={(value: number) => brl(value)}
                   />
-                  <Area type="monotone" dataKey="invested" stackId="1" stroke="rgb(113 113 122)" strokeWidth={1.5} fill="url(#gInvested)" />
-                  <Area type="monotone" dataKey="juros" stackId="1" stroke="rgb(16 185 129)" strokeWidth={2} fill="url(#gJuros)" />
+                  <Area type="monotone" dataKey="invested" stackId="1" stroke="none" fill="url(#gInvested)" />
+                  <Area type="monotone" dataKey="juros" stackId="1" stroke="none" fill="url(#gInterest)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          {/* INSIGHTS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <InsightBox>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">Aporte total em {years} anos</p>
+              <p className="text-2xl font-light text-zinc-100 mt-1 tabular-nums">{brl(totalContrib)}</p>
+            </InsightBox>
+            <InsightBox>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">Ganho com juros compostos</p>
+              <p className="text-2xl font-light text-emerald-400 mt-1 tabular-nums">{brl(totalInterest)}</p>
+            </InsightBox>
           </div>
         </div>
       </TooltipProvider>
@@ -413,293 +443,172 @@ function FireSimulator() {
   );
 }
 
-// =================== PGBL — Visualizador de Economia Tributária ===================
+// =================== TAX SIMULATOR ===================
 function TaxSimulator() {
-  const [annual, setAnnual] = useState(360000);
-  const [scenario, setScenario] = useState<"inercia" | "docfin">("docfin");
-  const cap = annual * 0.12;
-  const irSemPgbl = estimateAnnualIRPF2026(annual);
-  const irComPgbl = estimateAnnualIRPF2026(annual, cap);
+  const store = useStore();
+  const [irSemPgbl, setIrSemPgbl] = useState(0);
+  const [irComPgbl, setIrComPgbl] = useState(0);
+
+  useMemo(() => {
+    const annualGross = Math.max(0, globalIncomeMonthly(store) * 12);
+    const irSem = estimateAnnualIRPF2026(annualGross);
+    setIrSemPgbl(irSem);
+
+    const pgblContribution = Math.min(annualGross * 0.12, 16754);
+    const irCom = estimateAnnualIRPF2026(annualGross, pgblContribution);
+    setIrComPgbl(irCom);
+  }, [store]);
+
   const taxSaving = Math.max(0, irSemPgbl - irComPgbl);
   const pctSaved = irSemPgbl > 0 ? (taxSaving / irSemPgbl) * 100 : 0;
 
-  // Projeção 20 anos: Inércia (paga IR cheio todo ano) vs Docfin (economia investida a 8% real)
-  const chartData = useMemo(() => {
-    const years = 20;
-    const rate = 0.08;
-    const data: { year: number; inercia: number; docfin: number }[] = [];
-    let inerciaPaid = 0;
+  // Simulação de crescimento patrimonial com a economia de IR reinvestida.
+  const { docfinWealth } = useMemo(() => {
     let docfinWealth = 0;
-    for (let y = 1; y <= years; y++) {
-      inerciaPaid += irSemPgbl;
+    const rate = 0.08;
+    for (let y = 1; y <= 30; y++) {
       docfinWealth = docfinWealth * (1 + rate) + taxSaving;
-      data.push({
-        year: y,
-        inercia: Math.round(inerciaPaid),
-        docfin: Math.round(docfinWealth),
-      });
     }
-    return data;
+    return { docfinWealth };
   }, [irSemPgbl, taxSaving]);
 
-  const isDocfin = scenario === "docfin";
-
   return (
-    <Section title="PGBL — O Visualizador de Economia Tributária" subtitle="Quanto você devolve ao Leão? Arraste e veja.">
-      <TooltipProvider delayDuration={150}>
-        <div className="rounded-2xl bg-zinc-900/50 backdrop-blur-md border border-white/10 p-5 md:p-6 space-y-6">
-          {/* HERO */}
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-1.5">
-              <ShieldCheck className="h-3 w-3" /> Economia anual de IR
-            </p>
-            <p className="font-display text-5xl md:text-6xl font-light tabular-nums tracking-tight text-emerald-400 mt-1 drop-shadow-[0_0_30px_rgba(16,185,129,0.35)]">
-              {brl(taxSaving)}
-            </p>
-            <p className="text-xs text-zinc-400 mt-1">
-              aportando <span className="text-emerald-400/80">{brl(cap)}</span> em PGBL (12% da renda)
-            </p>
+    <Section
+      title="Simulador de Imposto"
+      subtitle="Visualize o impacto fiscal de uma estratégia PGBL vs sem PGBL."
+    >
+      <div className="rounded-2xl bg-zinc-900/50 backdrop-blur-md border border-white/10 p-5 md:p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="rounded-xl bg-zinc-950/60 border border-white/5 p-4">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">IR sem PGBL (ano)</p>
+            <p className="text-3xl font-light text-zinc-100 mt-2 tabular-nums">{brl(irSemPgbl)}</p>
           </div>
-
-          {/* EFFORT CONVERTER */}
-          <EffortConverter amount={taxSaving} period="ano" kind="saved" />
-
-          {/* SLIDER */}
-          <SliderField
-            label="Renda bruta anual tributável" prefix="R$ " format
-            tooltip="Soma de salário CLT, RPA e demais rendimentos tributáveis (não inclui PJ Simples Nacional)."
-            value={annual} min={60000} max={2000000} step={5000} onChange={setAnnual}
-          />
-
-          {/* SCENARIO TOGGLE */}
-          <div>
-            <div className="inline-flex p-1 rounded-xl bg-zinc-900 border border-zinc-800 mb-3">
-              <button
-                type="button"
-                onClick={() => setScenario("inercia")}
-                className={`px-4 py-2 rounded-lg text-xs font-medium transition flex items-center gap-2 ${
-                  !isDocfin ? "bg-rose-500/15 text-rose-300 shadow-[0_0_20px_-8px_rgba(244,63,94,0.6)]" : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <Skull className="h-3.5 w-3.5" /> Cenário Inércia
-              </button>
-              <button
-                type="button"
-                onClick={() => setScenario("docfin")}
-                className={`px-4 py-2 rounded-lg text-xs font-medium transition flex items-center gap-2 ${
-                  isDocfin ? "bg-emerald-500/15 text-emerald-300 shadow-[0_0_20px_-8px_rgba(16,185,129,0.7)]" : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <Crown className="h-3.5 w-3.5" /> Otimização Docfin
-              </button>
-            </div>
-
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
-              {isDocfin
-                ? "Patrimônio acumulado · economia investida a 8% real"
-                : "Imposto pago acumulado · 20 anos de inércia"}
-            </p>
-            <div className="h-56 -ml-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gInercia" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgb(244 63 94)" stopOpacity={0.65} />
-                      <stop offset="100%" stopColor="rgb(244 63 94)" stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="gDocfin" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="year" tick={{ fill: "rgb(161 161 170)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}a`} />
-                  <YAxis tick={{ fill: "rgb(161 161 170)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => compact(v)} width={55} />
-                  <RTooltip
-                    contentStyle={{ background: "rgba(9,9,11,0.95)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                    labelStyle={{ color: "rgb(244 244 245)" }}
-                    formatter={((v: any) => [brl(Number(v)), isDocfin ? "Patrimônio" : "Imposto pago"]) as any}
-                    labelFormatter={(l) => `Ano ${l}`}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey={isDocfin ? "docfin" : "inercia"}
-                    stroke={isDocfin ? "rgb(16 185 129)" : "rgb(244 63 94)"}
-                    strokeWidth={2}
-                    fill={isDocfin ? "url(#gDocfin)" : "url(#gInercia)"}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="rounded-xl bg-zinc-950/60 border border-white/5 p-4">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">IR com PGBL (ano)</p>
+            <p className="text-3xl font-light text-emerald-400 mt-2 tabular-nums">{brl(irComPgbl)}</p>
           </div>
-
-          {/* LION COMPARISON */}
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-3">
-              Quanto vai para o IRPF · tabela progressiva 2026
-            </p>
-            <div className="space-y-3">
-              <ScenarioBar
-                icon={<Skull className="h-4 w-4" />}
-                label="Sem PGBL"
-                sub="Cenário padrão"
-                value={irSemPgbl}
-                pct={100}
-                tone="rose"
-              />
-              <ScenarioBar
-                icon={<ShieldCheck className="h-4 w-4" />}
-                label="Com PGBL otimizado"
-                sub={`Diferimento: ${brl(taxSaving)} ficam investidos`}
-                value={irComPgbl}
-                pct={Math.max(8, (irComPgbl / irSemPgbl) * 100)}
-                tone="emerald"
-                highlight
-              />
-            </div>
-            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-start gap-3">
-              <Flame className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-sm leading-relaxed">
-                Você reduz o IR em <strong className="text-emerald-400 tabular-nums">{pctSaved.toFixed(1)}%</strong>.
-                Isso são <strong className="tabular-nums">{brl(taxSaving)}</strong> que continuam rendendo na sua previdência —
-                não na Receita.
-              </p>
-            </div>
+          <div className="rounded-xl bg-zinc-950/60 border border-white/5 p-4">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">Economia anual</p>
+            <p className="text-3xl font-light text-emerald-400 mt-2 tabular-nums">{brl(taxSaving)}</p>
+            <p className="text-[10px] text-zinc-500 mt-1">({pctSaved.toFixed(1)}% de redução)</p>
           </div>
         </div>
-      </TooltipProvider>
+
+        <EffortConverter amount={taxSaving} period="ano" kind="saved" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl bg-gradient-to-br from-emerald-900/20 to-transparent border border-emerald-500/20 p-4">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-emerald-400">Reinvestimento de 30 anos</p>
+            <p className="text-2xl font-light text-emerald-300 mt-2 tabular-nums">{brl(docfinWealth)}</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Isso são <strong className="tabular-nums">{brl(taxSaving)}</strong> que continuam rendendo na sua previdência —
+              juros compostos a 8% a.a. durante 30 anos.
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/60 border border-white/5 p-4">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">Limite de Dedução Simplificada</p>
+            <p className="text-2xl font-light text-zinc-100 mt-2 tabular-nums">R$ 16.754,00</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Teto anual para dedução na Declaração Simplificada do IRPF.
+            </p>
+          </div>
+        </div>
+      </div>
     </Section>
   );
 }
 
-// =================== UI HELPERS ===================
+// =================== HELPERS ===================
+function MiniStat({ label, value, tone }: { label: string; value: string; tone: "neutral" | "emerald" }) {
+  const color = tone === "emerald" ? "text-emerald-400" : "text-zinc-400";
+  return (
+    <div className="rounded-lg bg-zinc-950/60 border border-white/5 p-3 text-center">
+      <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500">{label}</p>
+      <p className={`text-lg font-light mt-1 tabular-nums ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function InsightBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg bg-zinc-950/60 border border-white/5 p-4">
+      {children}
+    </div>
+  );
+}
+
+function EffortConverter({ amount, period, kind }: { amount: number; period: "mês" | "ano"; kind?: "saved" }) {
+  const conversions = [
+    { label: "Consultas médicas", value: Math.round(amount / 250) },
+    { label: "Horas de plantão", value: Math.round(amount / 280) },
+    { label: "Dias de folga", value: Math.round((amount / 280) / 12) },
+  ];
+  return (
+    <div className="rounded-lg bg-zinc-950/60 border border-white/5 p-4">
+      <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 mb-3">
+        {kind === "saved" ? "Equivalência de" : "Esforço equivalente"}
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {conversions.map((c) => (
+          <div key={c.label} className="text-center">
+            <p className="text-lg font-light text-emerald-400 tabular-nums">{nf0.format(c.value)}</p>
+            <p className="text-[10px] text-zinc-500 mt-1">{c.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SliderField({
-  label, value, min, max, step, onChange, prefix = "", suffix = "", format = false, tooltip,
+  label, value, min, max, step, onChange, suffix, prefix, format, tooltip,
 }: {
-  label: string; value: number; min: number; max: number; step: number;
-  onChange: (n: number) => void;
-  prefix?: string; suffix?: string; format?: boolean; tooltip?: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  suffix?: string;
+  prefix?: string;
+  format?: boolean;
+  tooltip?: string;
 }) {
-  const display = format ? nf0.format(value) : value.toString().replace(".", ",");
-  const pct = ((value - min) / (max - min)) * 100;
+  const formatted = format ? new Intl.NumberFormat("pt-BR").format(value) : value;
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+        <label className="text-sm text-zinc-400">
           {label}
           {tooltip && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="text-zinc-500 hover:text-zinc-300 transition">
-                  <Info className="h-3 w-3" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[240px] text-xs leading-relaxed">
-                {tooltip}
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="inline h-3 w-3 ml-1 text-zinc-600 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  {tooltip}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
+        </label>
+        <span className="text-sm font-light text-emerald-400 tabular-nums">
+          {prefix}{formatted}{suffix}
         </span>
       </div>
-      <p className="text-3xl md:text-4xl font-bold tabular-nums text-emerald-400 mb-2 drop-shadow-[0_0_20px_rgba(16,185,129,0.25)]">
-        {prefix}{display}{suffix}
-      </p>
       <input
         type="range"
-        min={min} max={max} step={step} value={value}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
         onChange={(e) => onChange(+e.target.value)}
-        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+        className="w-full h-1 appearance-none rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 cursor-pointer"
         style={{
-          background: `linear-gradient(to right, rgb(16 185 129) 0%, rgb(16 185 129) ${pct}%, rgb(39 39 42) ${pct}%, rgb(39 39 42) 100%)`,
+          background: `linear-gradient(to right, rgb(16 185 129) 0%, rgb(16 185 129) ${((value - min) / (max - min)) * 100}%, rgb(39 39 42) ${((value - min) / (max - min)) * 100}%, rgb(39 39 42) 100%)`,
         }}
       />
-    </div>
-  );
-}
-
-function EffortConverter({
-  amount, period, kind = "neutral",
-}: { amount: number; period: "ano" | "mês"; kind?: "neutral" | "saved" }) {
-  const PLANTAO = 1200;
-  const CIRURGIA = 3500;
-  const plantoes = Math.max(0, Math.round(amount / PLANTAO));
-  const cirurgias = Math.max(0, Math.round(amount / CIRURGIA));
-  const verb = kind === "saved" ? "poupados" : "a menos";
-  if (amount <= 0) return null;
-  return (
-    <div className="rounded-xl bg-zinc-900/50 backdrop-blur-md border border-zinc-800 p-5">
-      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-1.5 mb-3">
-        <Zap className="h-3 w-3 text-emerald-400" /> Conversor de Esforço Médico
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-          <Stethoscope className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-          <p className="text-sm leading-relaxed">
-            Equivale a <strong className="text-emerald-400 tabular-nums text-lg">{plantoes}</strong> plantões {verb} por {period}
-          </p>
-        </div>
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-          <Scissors className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
-          <p className="text-sm leading-relaxed">
-            Ou <strong className="text-cyan-400 tabular-nums text-lg">{cirurgias}</strong> cirurgias eletivas (TUSS) {kind === "saved" ? "poupadas" : "a menos"} no {period}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value, tone }: { label: string; value: string; tone: "neutral" | "emerald" }) {
-  const color = tone === "emerald" ? "text-emerald-400" : "text-zinc-200";
-  return (
-    <div className="rounded-xl bg-white/5 border border-white/5 p-3">
-      <p className="text-[9px] uppercase tracking-wider text-zinc-500">{label}</p>
-      <p className={`font-display text-base mt-0.5 tabular-nums ${color}`}>{value}</p>
-    </div>
-  );
-}
-
-function ScenarioBar({
-  icon, label, sub, value, pct, tone, highlight,
-}: {
-  icon: React.ReactNode; label: string; sub: string;
-  value: number; pct: number; tone: "rose" | "emerald"; highlight?: boolean;
-}) {
-  const color = tone === "emerald" ? "rgb(16 185 129)" : "rgb(244 63 94)";
-  const glow = tone === "emerald" ? "rgba(16,185,129,0.35)" : "rgba(244,63,94,0.35)";
-  return (
-    <div
-      className={`rounded-xl p-3 border ${highlight ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/10 bg-white/[0.02]"}`}
-      style={highlight ? { boxShadow: `0 0 30px -10px ${glow}` } : undefined}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span style={{ color }}>{icon}</span>
-          <div>
-            <p className="text-sm font-medium">{label}</p>
-            <p className="text-[10px] text-zinc-500">{sub}</p>
-          </div>
-        </div>
-        <span className="font-display text-lg tabular-nums" style={{ color }}>{brl(value)}</span>
-      </div>
-      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color, boxShadow: highlight ? `0 0 12px ${glow}` : undefined }} />
-      </div>
-    </div>
-  );
-}
-
-
-function Stat({ icon, label, value, highlight }: { icon?: React.ReactNode; label: string; value: string; highlight?: boolean }) {
-  return (
-    <div
-      className={`rounded-xl p-3 ${highlight ? "" : "bg-surface-elevated/40"}`}
-      style={highlight ? { background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" } : undefined}
-    >
-      <p className={`text-[10px] uppercase tracking-wider flex items-center gap-1 ${highlight ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-        {icon}{label}
-      </p>
-      <p className={`font-display text-lg mt-1 ${highlight ? "text-primary-foreground" : ""}`}>{value}</p>
     </div>
   );
 }

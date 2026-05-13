@@ -880,28 +880,30 @@ export function isPJFocused(s: StoreState): boolean {
   return hasPJ && !hasPFCLT; // Considered PJ focused if has PJ income but no PF/CLT income
 }
 
+export type PGBLScenario = "A" | "B" | "C";
+
 export interface PGBLAdvantage {
-  hasAdvantage: boolean;
+  scenario: PGBLScenario;
+  annualPFCLTIncome: number;
   idealLimit: number;
   taxSavings: number;
-  isPJOnly: boolean;
 }
 
 export function calculatePGBLAdvantage(s: StoreState): PGBLAdvantage {
   const annualPFCLTIncome = getAnnualPFCLTIncome(s);
   const isPJOnly = isPJFocused(s);
+  const idealLimit = round2(annualPFCLTIncome * 0.12);
+  const taxSavings = round2(idealLimit * 0.275);
 
-  if (isPJOnly) {
-    return { hasAdvantage: false, idealLimit: 0, taxSavings: 0, isPJOnly: true };
+  if (isPJOnly || annualPFCLTIncome < 140000) {
+    return { scenario: "A", annualPFCLTIncome, idealLimit, taxSavings };
   }
 
-  if (annualPFCLTIncome > 60000) { // Faixa dos 27,5% de IR
-    const idealLimit = round2(annualPFCLTIncome * 0.12);
-    const taxSavings = round2(idealLimit * 0.275);
-    return { hasAdvantage: true, idealLimit, taxSavings, isPJOnly: false };
-  } else {
-    return { hasAdvantage: false, idealLimit: 0, taxSavings: 0, isPJOnly: false };
+  if (annualPFCLTIncome >= 140000 && annualPFCLTIncome <= 200000) {
+    return { scenario: "B", annualPFCLTIncome, idealLimit, taxSavings };
   }
+
+  return { scenario: "C", annualPFCLTIncome, idealLimit, taxSavings };
 }
 
 export function globalIncomeMonthly(s: StoreState): number {
