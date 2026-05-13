@@ -229,12 +229,12 @@ function CashFlow() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-5">
-            <button onClick={() => exportReport("pdf")}
+            <button onClick={handleDownloadPDF}
               className="rounded-xl py-3 text-sm font-medium text-primary-foreground inline-flex items-center justify-center gap-2"
               style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
               <FileText className="h-4 w-4" /> Gerar PDF
             </button>
-            <button onClick={() => exportReport("csv")}
+            <button onClick={exportCSV}
               className="rounded-xl py-3 text-sm font-medium border border-border bg-surface-elevated/40 hover:bg-surface-elevated/70 inline-flex items-center justify-center gap-2">
               <FileSpreadsheet className="h-4 w-4 text-primary" /> Exportar CSV
             </button>
