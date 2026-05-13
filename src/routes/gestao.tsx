@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useStore, brl2, brl, TAX_LABELS, monthlyFixedTotal, monthlyFixedIncomeNet, computedProLaboreMonthly, monthlyFixedIncomeGrossTotal, inssCeilingReached, daysUntil, DOCUMENT_KIND_LABELS, DOC_KIND_TO_FIXED_COST, INSS_CEILING, PAYMENT_RULE_LABELS, calculateCLTNetMonthly, calculateINSSProgressive, calculateIRRF2026, GOAL_CATEGORY_LABELS, type TaxRegime, type PaymentRule, type DocumentKind, type GoalCategory } from "@/lib/store";
 import { Section } from "@/components/Section";
 import { GoalCard } from "@/components/GoalCard";
@@ -400,12 +400,12 @@ function Manage() {
     );
   }
 
-  function WorkplacesCard() {
+    function WorkplacesCard() {
     const [name, setName] = useState("");
     const [address, setAddress] = useState("");
     const [lat, setLat] = useState<number | null>(null);
     const [lng, setLng] = useState<number | null>(null);
-    const [rate, setRate] = useState(250);
+
     const [regime, setRegime] = useState<TaxRegime>("PJ_SIMPLES");
     const [paymentRule, setPaymentRule] = useState<PaymentRule>("FIFTH_BUSINESS_DAY");
     const [cutOffDay, setCutOffDay] = useState(20);
@@ -414,35 +414,62 @@ function Manage() {
     const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string; class?: string; type?: string }>>([]);
     const [searching, setSearching] = useState(false);
     const [openSug, setOpenSug] = useState(false);
+    const [apiError, setApiError] = useState(false);
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const abortController = useRef<AbortController | null>(null);
 
-    // Debounced lookup on Nominatim — restrito a estabelecimentos de saúde (hospital, clinic, doctors)
+    useEffect(() => {
+      return () => {
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        if (abortController.current) abortController.current.abort();
+      };
+    }, []);
+
     function searchPlaces(q: string) {
       setName(q);
       setOpenSug(true);
-      if (q.trim().length < 3) { setSuggestions([]); return; }
+      setApiError(false);
+
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      if (abortController.current) abortController.current.abort();
+
+      if (q.trim().length < 3) {
+        setSuggestions([]);
+        return;
+      }
+
       setSearching(true);
-      const ctrl = new AbortController();
-      const t = setTimeout(async () => {
+      abortController.current = new AbortController();
+
+      searchTimeout.current = setTimeout(async () => {
         try {
-          // Equivalente Google Places types: ['hospital','health','establishment']
-          // No Nominatim filtramos por class=amenity/healthcare e tipos hospitalares.
           const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&extratags=1&limit=15&countrycodes=br&q=${encodeURIComponent(q)}`;
-          const r = await fetch(url, { signal: ctrl.signal, headers: { "Accept-Language": "pt-BR" } });
+          const r = await fetch(url, {
+            signal: abortController.current?.signal,
+            headers: { "Accept-Language": "pt-BR", "User-Agent": "Docfin/1.0" }
+          });
+
+          if (!r.ok) throw new Error("API request failed");
+
           const data: Array<any> = await r.json();
           const ALLOWED_TYPES = new Set(["hospital", "clinic", "doctors", "nursing_home"]);
           const filtered = data.filter((d) => {
             const cls = String(d.class || "").toLowerCase();
             const typ = String(d.type || "").toLowerCase();
-            if (cls === "healthcare") return true;
-            if (cls === "amenity" && ALLOWED_TYPES.has(typ)) return true;
-            if (cls === "building" && typ === "hospital") return true;
-            return false;
+            return cls === "healthcare" || (cls === "amenity" && ALLOWED_TYPES.has(typ)) || (cls === "building" && typ === "hospital");
           }).slice(0, 6);
+
           setSuggestions(filtered);
-        } catch { /* ignore */ }
-        finally { setSearching(false); }
-      }, 350);
-      return () => { clearTimeout(t); ctrl.abort(); };
+        } catch (err: any) {
+          if (err.name !== "AbortError") {
+            console.error("Address search error:", err);
+            setApiError(true);
+            setSuggestions([]);
+          }
+        } finally {
+          setSearching(false);
+        }
+      }, 500);
     }
 
     function pickSuggestion(item: { display_name: string; lat: string; lon: string }) {
@@ -463,7 +490,7 @@ function Manage() {
       // Se o usuário digitou e não escolheu sugestão, usa um fallback (centro de SP) — mantém compatibilidade.
       const finalLat = lat ?? -23.55 + (Math.random() - 0.5) * 0.05;
       const finalLng = lng ?? -46.65 + (Math.random() - 0.5) * 0.05;
-      s.addWorkplace({ name, address, lat: finalLat, lng: finalLng, regime, hourlyRate: rate, paymentRule, cutOffDay, paymentDay, paymentTermDays });
+      s.addWorkplace({ name, address, lat: finalLat, lng: finalLng, regime, hourlyRate: 0, paymentRule, cutOffDay, paymentDay, paymentTermDays });
       setName(""); setAddress(""); setLat(null); setLng(null); setSuggestions([]);
     }
     return (
@@ -544,9 +571,9 @@ function Manage() {
               </div>
             )}
           </div>
-          <Field label="Endereço (preenchido automaticamente)">
+          <Field label={apiError ? "Endereço (digitação manual - API indisponível)" : "Endereço (preenchido automaticamente)"}>
             <input
-              placeholder="Selecione uma sugestão acima"
+              placeholder={apiError ? "Digite o endereço completo" : "Selecione uma sugestão acima"}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className={inp}
@@ -557,18 +584,13 @@ function Manage() {
               <MapPin className="h-3 w-3" strokeWidth={1.5} /> Localização capturada: {lat.toFixed(4)}, {lng.toFixed(4)} — distância e gasolina serão calculadas automaticamente.
             </p>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Valor padrão sugerido (R$)">
-              <input type="number" placeholder="R$" value={rate} onChange={(e) => setRate(+e.target.value)} className={inp} />
-            </Field>
-            <Field label="Regime tributário">
-              <select value={regime} onChange={(e) => setRegime(e.target.value as TaxRegime)} className={inp}>
-                {Object.entries(TAX_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          <Field label="Regime tributário">
+            <select value={regime} onChange={(e) => setRegime(e.target.value as TaxRegime)} className={inp}>
+              {Object.entries(TAX_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
           <label className="block">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <CalendarClock className="h-3 w-3" /> Regra de pagamento
