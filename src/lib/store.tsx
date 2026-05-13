@@ -80,6 +80,8 @@ export interface Shift {
   coveredBy?: string;         // nome do colega que pegou o plantão
   /** Calculado automaticamente a partir do ciclo do hospital (YYYY-MM-DD). */
   expectedPaymentDate?: string;
+  projectedNet?: number;
+  projectedPaymentDate?: string;
 }
 
 // ============== Surgery Ledger ==============
@@ -619,9 +621,15 @@ export function calculateExpectedPaymentDate(
   if (workplace.paymentRule === "INSTANT_D0") return sd;
   const cut = Math.max(1, Math.min(31, workplace.cutOffDay ?? 20));
   const term = Math.max(0, workplace.paymentTermDays ?? 15);
+  
+  // Regra Matemática:
+  // Se o dia do plantão for MENOR OU IGUAL ao dia_de_corte, o pagamento ocorre no mesmo mês do corte + prazo_de_pagamento dias.
+  // Se o dia do plantão for MAIOR que o dia_de_corte, o pagamento transita para o corte do MÊS SEGUINTE + prazo_de_pagamento dias.
   const cycleBase = sd.getDate() <= cut ? sd : addMonths(sd, 1);
-  const lastDay = lastDayOfMonth(cycleBase).getDate();
-  const noteSendDate = setDate(cycleBase, Math.min(cut, lastDay));
+  
+  // O pagamento ocorre no mês do ciclo (cycleBase) no dia do corte + prazo de pagamento
+  const lastDayOfCycleMonth = lastDayOfMonth(cycleBase).getDate();
+  const noteSendDate = setDate(cycleBase, Math.min(cut, lastDayOfCycleMonth));
   return addDays(noteSendDate, term);
 }
 
@@ -947,7 +955,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addShift: (s) => setState((p) => {
       const wp = p.workplaces.find((w) => w.id === s.workplaceId);
       const expectedPaymentDate = wp ? fmtISO(calculateExpectedPaymentDate(s.date, wp)) : undefined;
-      return { ...p, shifts: [...p.shifts, { id: uid(), ...s, expectedPaymentDate }] };
+      return { ...p, shifts: [...p.shifts, { id: uid(), ...s, expectedPaymentDate, projectedPaymentDate: expectedPaymentDate }] };
     }),
     updateShift: (id, patch) => setState((p) => ({
       ...p,

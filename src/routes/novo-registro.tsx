@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import {
   useStore, computeShift, brl2, TAX_LABELS, computeTaxForRegime,
   checkTaxOptimization, getCurrentMonthPJTotal, computedProLaboreMonthly,
-  calculateExpectedPaymentDate, didSkipCycle, fmtDate,
+  calculateExpectedPaymentDate, didSkipCycle, fmtDate, fmtISO,
   type Shift, type TeamMember, type SurgeryRecord, type InvoiceMode,
   type TaxRegime,
 } from "@/lib/store";
@@ -11,7 +11,7 @@ import { Section } from "@/components/Section";
 import {
   MapPin, Navigation, Save, Info, Stethoscope, Scissors, Plus, Trash2,
   AlertTriangle, ShieldCheck, Users, Crown, UserCheck, ShieldAlert,
-  CalendarClock, Zap,
+  CalendarClock, Zap, TrendingUp,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -56,7 +56,7 @@ function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: ()
   );
 }
 
-/* ============ SHIFT FORM (mesma lógica original, preservada) ============ */
+/* ============ SHIFT FORM (Motor de Projeção de Caixa Implementado) ============ */
 function ShiftForm() {
   const store = useStore();
   const nav = useNavigate();
@@ -100,7 +100,17 @@ function ShiftForm() {
 
   function save() {
     if (!wp) return;
-    store.addShift({ date, workplaceId, originId, hours, gross: suggestedGross, extraCost });
+    const payDate = calculateExpectedPaymentDate(date, wp);
+    store.addShift({ 
+      date, 
+      workplaceId, 
+      originId, 
+      hours, 
+      gross: suggestedGross, 
+      extraCost,
+      projectedNet: math.net,
+      projectedPaymentDate: fmtISO(payDate)
+    });
     nav({ to: "/" });
   }
 
@@ -168,41 +178,62 @@ function ShiftForm() {
               <p className="font-mono text-sm text-warning">{brl2(math.logistics)}</p>
             </div>
           </div>
-          {taxAlert.triggered && (
-            <TaxRouterInsight
-              projectedTotal={taxAlert.projectedPJTotal}
-              onSwitchToPF={() => setRegimeOverride("PF")}
-            />
-          )}
+
+          {/* Motor de Projeção de Caixa — Card de Insight */}
           {wp && (() => {
             const payDate = calculateExpectedPaymentDate(date, wp);
             const skipped = didSkipCycle(date, wp);
             const instant = wp.paymentRule === "INSTANT_D0";
+            const isRPA = effectiveRegime === "RPA" || effectiveRegime === "PF";
+            const estimatedNetRPA = suggestedGross * 0.725; // Bruto - 27.5%
+
             return (
-              <div className={`mt-3 rounded-xl border p-3 flex gap-2 ${
-                instant ? "border-success/40 bg-success/10"
-                : skipped ? "border-warning/40 bg-warning/10"
-                : "border-primary/30 bg-primary/5"
-              }`}>
-                {instant ? <Zap className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                  : skipped ? <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                  : <CalendarClock className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
-                <div className="text-[11px] leading-snug">
-                  <p className={`font-medium ${instant ? "text-success" : skipped ? "text-warning" : "text-primary"}`}>
-                    {instant ? "Recebimento imediato (D+0)"
-                      : skipped ? "Pulo de ciclo detectado"
-                      : "Recebimento previsto"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {instant
-                      ? <>Particular/Pix — entra em <strong>{fmtDate(payDate)}</strong>.</>
-                      : <>Cai em <strong>{fmtDate(payDate)}</strong> — envio da nota no dia {wp.cutOffDay} do mês seguinte + {wp.paymentTermDays} dias de prazo.</>}
-                  </p>
+              <div className="mt-3 space-y-3">
+                <div className={`rounded-xl border p-4 flex gap-3 ${
+                  instant ? "border-emerald-500/30 bg-emerald-500/5"
+                  : skipped ? "border-amber-500/30 bg-amber-500/5"
+                  : "border-slate-500/30 bg-slate-500/5"
+                }`}>
+                  <div className="flex-shrink-0 pt-0.5">
+                    {instant ? <Zap className="h-5 w-5 text-emerald-400" />
+                      : skipped ? <AlertTriangle className="h-5 w-5 text-amber-400" />
+                      : <CalendarClock className="h-5 w-5 text-slate-400" />}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${
+                      instant ? "text-emerald-400" : skipped ? "text-amber-400" : "text-slate-300"
+                    }`}>
+                      Projeção de Recebimento: {fmtDate(payDate)}
+                    </p>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      {instant 
+                        ? "Particular/Pix — Liquidação imediata em D+0."
+                        : `Este plantão entra no ciclo de corte do dia ${wp.cutOffDay}. Envio da nota + ${wp.paymentTermDays} dias de prazo.`}
+                    </p>
+                    {isRPA && (
+                      <div className="pt-2 mt-2 border-t border-white/5 flex items-center gap-2">
+                        <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                        <p className="text-[11px] text-slate-300">
+                          Valor Líquido Estimado: <strong className="text-amber-400">{brl2(estimatedNetRPA)}</strong>. (Retenção na fonte projetada).
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })()}
-          <div className="border-t border-border pt-4 flex items-end justify-between">
+
+          {taxAlert.triggered && (
+            <div className="mt-3">
+              <TaxRouterInsight
+                projectedTotal={taxAlert.projectedPJTotal}
+                onSwitchToPF={() => setRegimeOverride("PF")}
+              />
+            </div>
+          )}
+
+          <div className="border-t border-border pt-4 mt-4 flex items-end justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Lucro líquido</p>
               <p className={`font-display text-3xl mt-0.5 ${math.net >= 0 ? "text-gradient" : "text-destructive"}`}>{brl2(math.net)}</p>
@@ -304,98 +335,89 @@ function SurgeryForm() {
           <Field label="Data">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Procedimento (TUSS / descrição)">
-            <input type="text" value={procedure} onChange={(e) => setProcedure(e.target.value)} placeholder="ex: 31602126 — Colecistectomia VL" className={inputCls} />
+          <Field label="Procedimento / Cirurgia">
+            <input type="text" value={procedure} onChange={(e) => setProcedure(e.target.value)} placeholder="Ex: Apendicectomia Laparoscópica" className={inputCls} />
+          </Field>
+          {myRole === "TITULAR" ? (
+            <>
+              <Field label="Hospital Pagador">
+                <select value={hospitalId} onChange={(e) => setHospitalId(e.target.value)} className={inputCls}>
+                  {store.workplaces.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Valor Bruto Recebido (R$)">
+                <input type="number" min={0} value={totalGross || ""} onChange={(e) => setTotalGross(+e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Modo de Emissão da Nota">
+                <select value={invoiceMode} onChange={(e) => setInvoiceMode(e.target.value as InvoiceMode)} className={inputCls}>
+                  <option value="FRACTIONED">Nota Fracionada (emito apenas minha parte)</option>
+                  <option value="SINGLE">Nota Única (emito valor cheio e repasso)</option>
+                </select>
+              </Field>
+              <Field label="Regime Tributário">
+                <select value={effectiveRegime} onChange={(e) => setRegimeOverride(e.target.value as TaxRegime)} className={inputCls}>
+                  {Object.entries(TAX_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="Cirurgião Titular (Pagador)">
+                <input type="text" value={payingSurgeonName} onChange={(e) => setPayingSurgeonName(e.target.value)} placeholder="Nome do colega" className={inputCls} />
+              </Field>
+              <Field label="Meu Repasse (R$)">
+                <input type="number" min={0} value={myExpectedShare || ""} onChange={(e) => setMyExpectedShare(+e.target.value)} className={inputCls} />
+              </Field>
+            </>
+          )}
+          <Field label="Observações">
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls + " h-20 py-3"} />
           </Field>
         </div>
       </Section>
 
-      {myRole === "TITULAR" ? (
-        <>
-          <Section title="Faturamento (Titular)" subtitle="Hospital pagador & valor cheio recebido">
-            <div className="glass-card rounded-2xl p-5 space-y-4">
-              <Field label="Hospital pagador" icon={<Navigation className="h-3.5 w-3.5" />}>
-                <select value={hospitalId} onChange={(e) => setHospitalId(e.target.value)} className={inputCls}>
-                  {store.workplaces.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name} · {TAX_LABELS[w.regime]}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Valor TOTAL faturado (R$)">
-                <input type="number" min={0} value={totalGross} onChange={(e) => setTotalGross(+e.target.value)} className={inputCls} />
-              </Field>
-              <Field label="Regime / Origem">
-                <select value={effectiveRegime} onChange={(e) => setRegimeOverride(e.target.value as TaxRegime)} className={inputCls}>
-                  <option value="PJ_SIMPLES">PJ (Simples Nacional)</option>
-                  <option value="CLT">CLT</option>
-                  <option value="RPA">RPA / Autônomo</option>
-                  <option value="PARTICULAR_PIX">Particular (Pix)</option>
-                  <option value="SCP">Sociedade (SCP)</option>
-                </select>
-              </Field>
-
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Como a NF foi emitida?</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <InvoiceBtn active={invoiceMode === "SINGLE"} onClick={() => setInvoiceMode("SINGLE")} label="Nota Única" sub="Faturei o total" />
-                  <InvoiceBtn active={invoiceMode === "FRACTIONED"} onClick={() => setInvoiceMode("FRACTIONED")} label="Notas Fracionadas" sub="Cada um emitiu a sua" />
+      {myRole === "TITULAR" && (
+        <Section title="Repasses da Equipe" subtitle={`Total a repassar: ${brl2(teamTotal)}`}>
+          <div className="space-y-3">
+            {team.map((m) => (
+              <div key={m.id} className="glass-card rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Membro da Equipe</p>
+                  <button onClick={() => removeMember(m.id)} className="text-destructive hover:bg-destructive/10 p-1 rounded-lg transition"><Trash2 className="h-4 w-4" /></button>
                 </div>
-                {invoiceMode === "SINGLE" && totalGross > 0 && (
-                  <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 flex gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                    <div className="text-[11px] leading-snug">
-                      <p className="text-destructive font-medium">Risco de Bitributação</p>
-                      <p className="text-muted-foreground">O imposto incidirá sobre o dinheiro da equipe. Imposto estimado: <span className="text-destructive font-mono">{brl2(totalGross * taxRate)}</span> sobre o valor cheio.</p>
-                    </div>
-                  </div>
-                )}
-                {invoiceMode === "FRACTIONED" && (
-                  <div className="mt-3 rounded-xl border border-success/40 bg-success/10 p-3 flex gap-2">
-                    <ShieldCheck className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                    <div className="text-[11px] leading-snug">
-                      <p className="text-success font-medium">Tributação otimizada</p>
-                      <p className="text-muted-foreground">Imposto incide apenas sobre sua parte líquida ({brl2(myShareTitular)}).</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Equipe & repasses" subtitle="Quanto cada membro receberá quando o hospital pagar"
-            action={
-              <button onClick={addMember} className="text-xs inline-flex items-center gap-1 text-primary hover:underline">
-                <Plus className="h-3.5 w-3.5" /> Adicionar
-              </button>
-            }>
-            <div className="glass-card rounded-2xl p-3 space-y-2">
-              {team.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhum membro. Adicione auxiliares, anestesista, instrumentador.</p>
-              )}
-              {team.map((m) => (
-                <div key={m.id} className="bg-surface-elevated/40 rounded-lg p-3 grid grid-cols-12 gap-2 items-center">
-                  <input className={inputCls + " col-span-5"} placeholder="Nome" value={m.name} onChange={(e) => updateMember(m.id, { name: e.target.value })} />
-                  <input className={inputCls + " col-span-3"} placeholder="Função" value={m.role} onChange={(e) => updateMember(m.id, { role: e.target.value })} />
-                  <input type="number" className={inputCls + " col-span-3"} placeholder="R$" value={m.amountDue} onChange={(e) => updateMember(m.id, { amountDue: +e.target.value })} />
-                  <button onClick={() => removeMember(m.id)} className="col-span-1 text-muted-foreground hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" value={m.name} onChange={(e) => updateMember(m.id, { name: e.target.value })} placeholder="Nome" className={inputCls} />
+                  <input type="text" value={m.role} onChange={(e) => updateMember(m.id, { role: e.target.value })} placeholder="Papel (ex: Auxiliar)" className={inputCls} />
                 </div>
-              ))}
-              <div className="flex items-center justify-between pt-2 px-2 text-xs">
-                <span className="text-muted-foreground inline-flex items-center gap-1"><Users className="h-3 w-3" /> Total de repasses</span>
-                <span className="font-mono text-warning">{brl2(teamTotal)}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <input type="number" min={0} value={m.amountDue || ""} onChange={(e) => updateMember(m.id, { amountDue: +e.target.value })} placeholder="Valor R$" className={inputCls} />
+                  </div>
+                  <div className="flex items-center gap-2 px-3 h-12 rounded-xl bg-surface-elevated/40 border border-white/5">
+                    <input type="checkbox" checked={m.isPaid} onChange={(e) => updateMember(m.id, { isPaid: e.target.checked })} className="rounded border-white/10 bg-zinc-900 text-primary focus:ring-primary" />
+                    <span className="text-xs text-muted-foreground">Já pago</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Section>
+            ))}
+            <button onClick={addMember} className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20 transition flex items-center justify-center gap-2 text-sm">
+              <Plus className="h-4 w-4" /> Adicionar Membro
+            </button>
+          </div>
+        </Section>
+      )}
 
-          <Section title="Resumo (Titular)">
-            <div className="glass-card rounded-2xl p-5">
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <Metric label="Valor cheio" value={brl2(totalGross)} />
-                <Metric label="Repasses equipe" value={brl2(teamTotal)} accent="warning" />
-                <Metric label={`Imposto (${(taxRate * 100).toFixed(2)}%)`} value={brl2(taxEstimated)} accent="warning" />
-                <Metric label="Base tributável" value={brl2(taxBase)} />
+      <Section title="Resumo Financeiro">
+        <div className="glass-card rounded-2xl p-5">
+          {myRole === "TITULAR" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Metric label="Minha Parte (Bruta)" value={brl2(myShareTitular)} />
+                <Metric label="Imposto Est." value={brl2(taxEstimated)} accent="warning" />
               </div>
               {taxAlert.triggered && (
                 <TaxRouterInsight
@@ -405,114 +427,65 @@ function SurgeryForm() {
               )}
               <div className="border-t border-border pt-4 flex items-end justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Meu líquido</p>
+                  <p className="text-xs text-muted-foreground">Meu Líquido Final</p>
                   <p className={`font-display text-3xl mt-0.5 ${myNet >= 0 ? "text-gradient" : "text-destructive"}`}>{brl2(myNet)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Base de cálculo: {brl2(taxBase)} ({effectiveRegime})</p>
                 </div>
-                <button onClick={save} disabled={!hospital || totalGross <= 0}
-                  className="rounded-xl px-5 py-3 text-sm font-medium text-primary-foreground inline-flex items-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
-                  <Save className="h-4 w-4" /> Salvar cirurgia
+                <button onClick={save} className="rounded-xl px-5 py-3 text-sm font-medium text-primary-foreground inline-flex items-center gap-2" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
+                  <Save className="h-4 w-4" /> Salvar
                 </button>
               </div>
             </div>
-          </Section>
-        </>
-      ) : (
-        <Section title="Recebimento de colega (Membro de Equipe)">
-          <div className="glass-card rounded-2xl p-5 space-y-4">
-            <Field label="Cirurgião que vai te pagar">
-              <input type="text" value={payingSurgeonName} onChange={(e) => setPayingSurgeonName(e.target.value)} placeholder="Dr. Fulano" className={inputCls} />
-            </Field>
-            <Field label="Valor a receber (R$)">
-              <input type="number" min={0} value={myExpectedShare} onChange={(e) => setMyExpectedShare(+e.target.value)} className={inputCls} />
-            </Field>
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-[11px] text-muted-foreground leading-snug">
-              Esta cirurgia entrará no painel <span className="text-primary font-medium">"A Receber de Colegas"</span> em Caixa.
+          ) : (
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">A receber de {payingSurgeonName || "colega"}</p>
+                <p className="font-display text-3xl mt-0.5 text-gradient">{brl2(myExpectedShare)}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Repasse via SCP (Isento de IR)</p>
+              </div>
+              <button onClick={save} className="rounded-xl px-5 py-3 text-sm font-medium text-primary-foreground inline-flex items-center gap-2" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
+                <Save className="h-4 w-4" /> Salvar
+              </button>
             </div>
-            <button onClick={save} disabled={!payingSurgeonName || myExpectedShare <= 0}
-              className="w-full rounded-xl py-3 text-sm font-medium text-primary-foreground inline-flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
-              <Save className="h-4 w-4" /> Salvar
-            </button>
-          </div>
-        </Section>
-      )}
+          )}
+        </div>
+      </Section>
     </>
   );
 }
 
-/* ============ helpers UI ============ */
-const inputCls = "w-full bg-input/60 border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
-
+/* ============ SHARED COMPONENTS ============ */
 function Field({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1 mb-1.5">
+    <div className="space-y-2">
+      <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-2">
         {icon} {label}
-      </span>
+      </label>
       {children}
-    </label>
-  );
-}
-function Metric({ label, value, accent }: { label: string; value: string; accent?: "warning" }) {
-  return (
-    <div className="bg-surface-elevated/40 rounded-lg p-3">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`font-mono text-sm mt-1 ${accent === "warning" ? "text-warning" : ""}`}>{value}</p>
     </div>
   );
 }
-function RoleBtn({ active, onClick, icon, label, sub }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; sub: string }) {
+
+function Metric({ label, value, accent }: { label: string; value: string; accent?: "warning" }) {
   return (
-    <button onClick={onClick}
-      className={`rounded-xl p-3 text-left transition ${active ? "text-primary-foreground" : "text-foreground bg-surface-elevated/40 hover:bg-surface-elevated/70"}`}
-      style={active ? { background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" } : undefined}>
-      <div className="inline-flex items-center gap-1.5 text-sm font-medium">{icon} {label}</div>
-      <p className={`text-[10px] mt-0.5 ${active ? "opacity-90" : "text-muted-foreground"}`}>{sub}</p>
-    </button>
-  );
-}
-function InvoiceBtn({ active, onClick, label, sub }: { active: boolean; onClick: () => void; label: string; sub: string }) {
-  return (
-    <button onClick={onClick}
-      className={`rounded-xl p-3 text-left border transition ${active ? "border-primary bg-primary/10" : "border-border bg-surface-elevated/40 hover:bg-surface-elevated/70"}`}>
-      <p className="text-sm font-medium">{label}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
-    </button>
+    <div className="bg-surface-elevated/40 rounded-lg p-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+      <p className={`font-mono text-sm ${accent === "warning" ? "text-warning" : "text-foreground"}`}>{value}</p>
+    </div>
   );
 }
 
-/* ============ Smart Tax Router — Insight Card ============ */
-function TaxRouterInsight({
-  projectedTotal,
-  onSwitchToPF,
-}: {
-  projectedTotal: number;
-  onSwitchToPF: () => void;
-}) {
+function TaxRouterInsight({ projectedTotal, onSwitchToPF }: { projectedTotal: number; onSwitchToPF: () => void }) {
   return (
-    <div
-      className="my-4 rounded-xl border border-amber-500/30 bg-amber-900/20 p-3.5 flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300"
-      role="status"
-      aria-live="polite"
-    >
-      <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-      <div className="flex-1 space-y-2">
-        <p className="text-[12px] leading-snug text-amber-100">
-          <span className="font-medium">Otimização Fiscal:</span> Este valor fará sua PJ
-          {" "}<span className="text-amber-300 font-medium">perder o Fator R</span>
-          {" "}(faturamento PJ projetado: <span className="font-mono">{brl2(projectedTotal)}</span>).
-          O imposto sobe de <span className="font-mono">6%</span> para <span className="font-mono">15,5%</span>.
-          Considere faturar este procedimento via Pessoa Física (RPA/Carnê Leão) ou ajustar seu Pro-labore.
-        </p>
-        <button
-          type="button"
-          onClick={onSwitchToPF}
-          className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 text-[11px] font-medium text-amber-200 transition"
-        >
-          Mudar para Pessoa Física
-        </button>
+    <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 flex gap-2">
+      <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+      <div className="text-[11px] leading-snug">
+        <p className="font-medium text-warning">Risco de Anexo V (15,5%)</p>
+        <p className="text-muted-foreground">Seu faturamento PJ no mês atingirá {brl2(projectedTotal)}. Para manter 6%, seu pró-labore precisaria subir.</p>
+        <button onClick={onSwitchToPF} className="mt-2 text-primary font-semibold hover:underline">Mudar este plantão para RPA (PF)</button>
       </div>
     </div>
   );
 }
+
+const inputCls = "w-full bg-surface-elevated/60 border border-white/5 rounded-xl h-12 px-4 text-sm focus:outline-none focus:border-primary/40 transition-colors";
