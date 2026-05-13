@@ -150,9 +150,21 @@ function CashFlow() {
     <>
       <Section title="Relatórios & Caixa" subtitle="Quando o dinheiro cai — projeção por hospital">
         <div className="glass-card rounded-2xl p-5">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">A receber (projetado)</p>
-          <p className="font-display text-4xl mt-1 text-gradient">{brl(total)}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">{totalCount} plantão(ões) aguardando pagamento</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">A receber (projetado)</p>
+              <p className="font-display text-4xl mt-1 text-gradient">{brl(total)}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{totalCount} plantão(ões) aguardando pagamento</p>
+            </div>
+            <button
+              onClick={exportCSV}
+              className="shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-medium border border-white/10 bg-slate-900/60 hover:bg-slate-900/80 text-slate-100 transition backdrop-blur"
+              aria-label="Exportar Relatório em CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-primary" />
+              Exportar Relatório (CSV)
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 gap-2 mt-5">
             <button onClick={() => exportReport("pdf")}
@@ -168,6 +180,60 @@ function CashFlow() {
           <p className="text-[10px] text-muted-foreground mt-2 inline-flex items-center gap-1">
             <FileDown className="h-3 w-3" /> Inclui memorial por hospital, regra de pagamento e líquido projetado.
           </p>
+        </div>
+      </Section>
+
+      <Section title="Faturamento por Mês" subtitle="Plantões agrupados pela data de execução · valores brutos">
+        <div className="space-y-2">
+          {billingByMonth.length === 0 && (
+            <div className="rounded-2xl border border-white/5 bg-slate-900/40 backdrop-blur p-8 text-center text-sm text-slate-400">
+              Nenhum plantão registrado ainda.
+            </div>
+          )}
+          {billingByMonth.map((g) => {
+            const isOpen = openBillingMonth === g.key;
+            return (
+              <div key={g.key} className="rounded-2xl border border-white/5 bg-slate-900/40 backdrop-blur overflow-hidden">
+                <button
+                  onClick={() => setOpenBillingMonth(isOpen ? null : g.key)}
+                  className="w-full p-4 text-left hover:bg-slate-900/60 transition"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {isOpen ? <ChevronDown className="h-4 w-4 text-primary shrink-0" /> : <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
+                      <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium capitalize truncate text-slate-100">{g.label}</p>
+                        <p className="text-[10px] text-slate-400">{g.items.length} plantão(ões)</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400">Faturamento</p>
+                      <p className="font-mono text-base text-slate-100">{brl(g.total)}</p>
+                    </div>
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="border-t border-white/5 divide-y divide-white/5">
+                    {g.items.map((it) => (
+                      <div key={it.id} className="px-4 py-3 grid grid-cols-12 gap-2 items-center">
+                        <p className="col-span-3 text-[12px] text-slate-300 tabular-nums inline-flex items-center gap-1.5">
+                          <CalendarIcon className="h-3 w-3 text-slate-500" />
+                          {fmtDate(new Date(it.date + "T12:00:00"))}
+                        </p>
+                        <p className="col-span-5 text-[12px] text-slate-100 truncate inline-flex items-center gap-1.5">
+                          <Building2 className="h-3 w-3 text-slate-500 shrink-0" />
+                          {it.hospital}
+                        </p>
+                        <p className="col-span-2 text-[10px] uppercase tracking-wider text-slate-400 truncate">{it.regimeLabel}</p>
+                        <p className="col-span-2 text-right font-mono text-[12px] text-slate-100 tabular-nums">{brl2(it.gross)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </Section>
 
