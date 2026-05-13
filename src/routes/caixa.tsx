@@ -7,8 +7,6 @@ import {
 import { Section } from "@/components/Section";
 import { FileDown, CalendarClock, ChevronRight, ChevronDown, CheckCircle2, FileText, FileSpreadsheet, ArrowDownCircle, ArrowUpCircle, UserCheck, Crown, AlertTriangle, Zap, Download, Calendar as CalendarIcon, Building2 } from "lucide-react";
 import { ShiftHandoffModal } from "@/components/ShiftHandoffModal";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/caixa")({
   head: () => ({
@@ -143,69 +141,13 @@ function CashFlow() {
   }
 
   function handleDownloadPDF() {
-    const rows = store.shifts
-      .slice()
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .map((s) => {
-        const wp = store.workplaces.find((w) => w.id === s.workplaceId);
-        return {
-          date: s.date,
-          dateLabel: fmtDate(new Date(s.date + "T12:00:00")),
-          hospital: wp?.name ?? "—",
-          regime: wp ? TAX_LABELS[wp.regime] : "—",
-          gross: s.gross,
-        };
-      });
-    const totalGross = rows.reduce((a, r) => a + r.gross, 0);
-
-    const sortedAsc = [...rows].sort((a, b) => a.date.localeCompare(b.date));
-    const period = sortedAsc.length
-      ? `${fmtDate(new Date(sortedAsc[0].date + "T12:00:00"))} a ${fmtDate(new Date(sortedAsc[sortedAsc.length - 1].date + "T12:00:00"))}`
-      : monthLabel(new Date());
-
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const marginX = 40;
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("DOCFIN — EXTRATO DE RENDIMENTOS", marginX, 50);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text("Titular da conta", marginX, 68);
-    doc.text(`Período: ${period}`, marginX, 82);
-
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.line(marginX, 92, pageW - marginX, 92);
-
-    autoTable(doc, {
-      startY: 104,
-      margin: { left: marginX, right: marginX },
-      head: [["Data", "Hospital", "Regime", "Valor Bruto"]],
-      body: rows.map((r) => [r.dateLabel, r.hospital, r.regime, brl(r.gross)]),
-      foot: [[{ content: "Total Geral", colSpan: 3, styles: { halign: "right", fontStyle: "bold" } }, { content: brl(totalGross), styles: { halign: "right", fontStyle: "bold" } }]],
-      theme: "plain",
-      styles: { font: "helvetica", fontSize: 10, textColor: [0, 0, 0], cellPadding: 6 },
-      headStyles: { fontStyle: "bold", fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: { bottom: 0.75 }, lineColor: [0, 0, 0] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: { 3: { halign: "right" } },
-      footStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: { top: 0.75 }, lineColor: [0, 0, 0] },
-      didDrawPage: () => {
-        const pageH = doc.internal.pageSize.getHeight();
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(120, 120, 120);
-        doc.text(`Emitido em ${fmtDate(new Date())} · Docfin`, marginX, pageH - 20);
-      },
-    });
-
-    doc.save("extrato_docfin.pdf");
-    setToast("Relatório PDF exportado com sucesso");
-    setTimeout(() => setToast(null), 2400);
+    document.body.classList.add("print-ledger");
+    const cleanup = () => {
+      document.body.classList.remove("print-ledger");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    setTimeout(() => window.print(), 50);
   }
 
   return (
@@ -228,11 +170,11 @@ function CashFlow() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-5">
+          <div className="grid grid-cols-2 gap-2 mt-5 no-print">
             <button onClick={handleDownloadPDF}
               className="rounded-xl py-3 text-sm font-medium text-primary-foreground inline-flex items-center justify-center gap-2"
               style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}>
-              <FileText className="h-4 w-4" /> Gerar PDF
+              <FileText className="h-4 w-4" /> Exportar PDF
             </button>
             <button onClick={exportCSV}
               className="rounded-xl py-3 text-sm font-medium border border-border bg-surface-elevated/40 hover:bg-surface-elevated/70 inline-flex items-center justify-center gap-2">
@@ -245,6 +187,10 @@ function CashFlow() {
         </div>
       </Section>
 
+      <div className="print-area">
+        <div className="hidden print:block print:text-center print:font-bold print:mb-6 print:text-2xl">
+          DOCFIN — Extrato de Rendimentos Mensais
+        </div>
       <Section title="Faturamento por Mês" subtitle="Plantões agrupados pela data de execução · valores brutos">
         <div className="space-y-2">
           {billingByMonth.length === 0 && (
@@ -298,6 +244,7 @@ function CashFlow() {
           })}
         </div>
       </Section>
+      </div>
 
       <Section title="Contas a receber" subtitle="Linha do tempo · clique no mês para detalhar">
         <div className="space-y-2">
