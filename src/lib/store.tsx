@@ -618,7 +618,7 @@ export function calculateExpectedPaymentDate(
   shiftDateISO: string,
   workplace: Pick<Workplace, "cutOffDay" | "paymentDay" | "paymentRule" | "paymentTermDays">,
 ): Date {
-  const sd = new Date(shiftDateISO + "T12:00:00");
+  const sd = startOfDay(parseISO(shiftDateISO));
   if (workplace.paymentRule === "INSTANT_D0") return sd;
   const cut = Math.max(1, Math.min(31, workplace.cutOffDay ?? 20));
   const term = Math.max(0, workplace.paymentTermDays ?? 15);
