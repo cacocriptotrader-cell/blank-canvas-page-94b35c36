@@ -13,6 +13,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [mode, setMode] = useState<"login" | "register">("login");
   const navigate = useNavigate();
 
