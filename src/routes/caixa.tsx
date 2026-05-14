@@ -151,7 +151,7 @@ function CashFlow() {
 
     const activeMonth = billingByMonth.find((m) => m.key === openBillingMonth) || billingByMonth[0];
     const periodLabel = activeMonth ? activeMonth.label : monthLabel(now);
-    const userName = store.taxProfile?.fullName || store.taxProfile?.displayName || "Médico(a)";
+    const userName = "Médico(a)";
 
     // Cabeçalho
     doc.setFont("helvetica", "bold");
