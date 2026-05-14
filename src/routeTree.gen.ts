@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PatrimonioRouteImport } from './routes/patrimonio'
 import { Route as NovoRegistroRouteImport } from './routes/novo-registro'
 import { Route as NovoPlantaoRouteImport } from './routes/novo-plantao'
-import { Route as ImprimirRelatorioRouteImport } from './routes/imprimir-relatorio'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as FuturoRouteImport } from './routes/futuro'
 import { Route as FechamentoRouteImport } from './routes/fechamento'
@@ -35,9 +35,9 @@ const NovoPlantaoRoute = NovoPlantaoRouteImport.update({
   path: '/novo-plantao',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ImprimirRelatorioRoute = ImprimirRelatorioRouteImport.update({
-  id: '/imprimir-relatorio',
-  path: '/imprimir-relatorio',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GestaoRoute = GestaoRouteImport.update({
@@ -78,7 +78,7 @@ export interface FileRoutesByFullPath {
   '/fechamento': typeof FechamentoRoute
   '/futuro': typeof FuturoRoute
   '/gestao': typeof GestaoRoute
-  '/imprimir-relatorio': typeof ImprimirRelatorioRoute
+  '/login': typeof LoginRoute
   '/novo-plantao': typeof NovoPlantaoRoute
   '/novo-registro': typeof NovoRegistroRoute
   '/patrimonio': typeof PatrimonioRoute
@@ -90,7 +90,7 @@ export interface FileRoutesByTo {
   '/fechamento': typeof FechamentoRoute
   '/futuro': typeof FuturoRoute
   '/gestao': typeof GestaoRoute
-  '/imprimir-relatorio': typeof ImprimirRelatorioRoute
+  '/login': typeof LoginRoute
   '/novo-plantao': typeof NovoPlantaoRoute
   '/novo-registro': typeof NovoRegistroRoute
   '/patrimonio': typeof PatrimonioRoute
@@ -103,7 +103,7 @@ export interface FileRoutesById {
   '/fechamento': typeof FechamentoRoute
   '/futuro': typeof FuturoRoute
   '/gestao': typeof GestaoRoute
-  '/imprimir-relatorio': typeof ImprimirRelatorioRoute
+  '/login': typeof LoginRoute
   '/novo-plantao': typeof NovoPlantaoRoute
   '/novo-registro': typeof NovoRegistroRoute
   '/patrimonio': typeof PatrimonioRoute
@@ -117,7 +117,7 @@ export interface FileRouteTypes {
     | '/fechamento'
     | '/futuro'
     | '/gestao'
-    | '/imprimir-relatorio'
+    | '/login'
     | '/novo-plantao'
     | '/novo-registro'
     | '/patrimonio'
@@ -129,7 +129,7 @@ export interface FileRouteTypes {
     | '/fechamento'
     | '/futuro'
     | '/gestao'
-    | '/imprimir-relatorio'
+    | '/login'
     | '/novo-plantao'
     | '/novo-registro'
     | '/patrimonio'
@@ -141,7 +141,7 @@ export interface FileRouteTypes {
     | '/fechamento'
     | '/futuro'
     | '/gestao'
-    | '/imprimir-relatorio'
+    | '/login'
     | '/novo-plantao'
     | '/novo-registro'
     | '/patrimonio'
@@ -154,7 +154,7 @@ export interface RootRouteChildren {
   FechamentoRoute: typeof FechamentoRoute
   FuturoRoute: typeof FuturoRoute
   GestaoRoute: typeof GestaoRoute
-  ImprimirRelatorioRoute: typeof ImprimirRelatorioRoute
+  LoginRoute: typeof LoginRoute
   NovoPlantaoRoute: typeof NovoPlantaoRoute
   NovoRegistroRoute: typeof NovoRegistroRoute
   PatrimonioRoute: typeof PatrimonioRoute
@@ -183,11 +183,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NovoPlantaoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/imprimir-relatorio': {
-      id: '/imprimir-relatorio'
-      path: '/imprimir-relatorio'
-      fullPath: '/imprimir-relatorio'
-      preLoaderRoute: typeof ImprimirRelatorioRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gestao': {
@@ -242,7 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   FechamentoRoute: FechamentoRoute,
   FuturoRoute: FuturoRoute,
   GestaoRoute: GestaoRoute,
-  ImprimirRelatorioRoute: ImprimirRelatorioRoute,
+  LoginRoute: LoginRoute,
   NovoPlantaoRoute: NovoPlantaoRoute,
   NovoRegistroRoute: NovoRegistroRoute,
   PatrimonioRoute: PatrimonioRoute,
@@ -250,3 +250,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
