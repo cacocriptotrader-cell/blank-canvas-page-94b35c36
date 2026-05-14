@@ -56,6 +56,21 @@ function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: ()
   );
 }
 
+function RoleBtn({ active, onClick, icon, label, sub }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; sub: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-xl p-3 text-left transition ${
+        active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+      }`}
+      style={active ? { background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" } : undefined}
+    >
+      <div className="inline-flex items-center gap-2 text-sm font-medium">{icon} {label}</div>
+      <div className="text-[11px] opacity-80 mt-0.5">{sub}</div>
+    </button>
+  );
+}
+
 /* ============ SHIFT FORM (Motor de Projeção de Caixa Implementado) ============ */
 function ShiftForm() {
   const store = useStore();
