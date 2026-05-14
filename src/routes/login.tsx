@@ -38,6 +38,7 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setInfo(null);
 
     try {
       if (mode === "login") {
@@ -52,24 +53,13 @@ function LoginPage() {
           password,
         });
         if (authError) throw authError;
-        alert("Verifique seu e-mail para confirmar o cadastro.");
+        setInfo("Verifique seu e-mail para confirmar o cadastro.");
+        return;
       }
 
-      // Check profile and redirect
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.onboarding_completed) {
-          navigate({ to: "/" });
-        } else {
-          navigate({ to: "/gestao" }); // Using /gestao as the onboarding target based on previous context
-        }
-      }
+      // Após login, redireciona para a raiz; OnboardingGate decide
+      // entre mostrar o Onboarding ou o AppShell conforme onboarding_completed.
+      navigate({ to: "/" });
     } catch (err: any) {
       setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message);
     } finally {
