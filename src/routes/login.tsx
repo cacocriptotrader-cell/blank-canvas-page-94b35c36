@@ -164,6 +164,12 @@ function LoginPage() {
             </p>
           )}
 
+          {info && (
+            <p className="text-xs text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-lg p-3">
+              {info}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={loading}
