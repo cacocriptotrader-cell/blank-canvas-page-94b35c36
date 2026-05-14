@@ -600,6 +600,7 @@ export function computePaymentDate(shiftDateISO: string, rule: PaymentRule): Dat
     case "END_OF_MONTH": return new Date(y, m + 1, 0);
     case "NEXT_MONTH_FIFTH": return new Date(y, m + 1, 5);
     case "INSTANT_D0": return sd;
+    default: return sd;
   }
 }
 
