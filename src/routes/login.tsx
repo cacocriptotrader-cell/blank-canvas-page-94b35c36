@@ -13,6 +13,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [mode, setMode] = useState<"login" | "register">("login");
   const navigate = useNavigate();
 
@@ -23,7 +24,7 @@ function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard',
+          redirectTo: window.location.origin + '/',
         },
       });
       if (error) throw error;
@@ -37,6 +38,7 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setInfo(null);
 
     try {
       if (mode === "login") {
@@ -51,24 +53,13 @@ function LoginPage() {
           password,
         });
         if (authError) throw authError;
-        alert("Verifique seu e-mail para confirmar o cadastro.");
+        setInfo("Verifique seu e-mail para confirmar o cadastro.");
+        return;
       }
 
-      // Check profile and redirect
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.onboarding_completed) {
-          navigate({ to: "/" });
-        } else {
-          navigate({ to: "/gestao" }); // Using /gestao as the onboarding target based on previous context
-        }
-      }
+      // Após login, redireciona para a raiz; OnboardingGate decide
+      // entre mostrar o Onboarding ou o AppShell conforme onboarding_completed.
+      navigate({ to: "/" });
     } catch (err: any) {
       setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message);
     } finally {
@@ -170,6 +161,12 @@ function LoginPage() {
           {error && (
             <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
               {error}
+            </p>
+          )}
+
+          {info && (
+            <p className="text-xs text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-lg p-3">
+              {info}
             </p>
           )}
 

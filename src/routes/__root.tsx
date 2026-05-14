@@ -150,11 +150,12 @@ function OnboardingGate() {
   }
 
   if (session && pathname === "/login") {
-    if (onboardingCompleted) {
-      navigate({ to: "/" });
-    } else {
-      // Stay on root to show onboarding
-    }
+    navigate({ to: "/" });
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="h-8 w-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (session && !onboardingCompleted) {
