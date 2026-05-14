@@ -640,7 +640,7 @@ export function didSkipCycle(
   workplace: Pick<Workplace, "cutOffDay" | "paymentRule">,
 ): boolean {
   if (workplace.paymentRule === "INSTANT_D0") return false;
-  const sd = new Date(shiftDateISO + "T12:00:00");
+  const sd = startOfDay(parseISO(shiftDateISO));
   const cut = Math.max(1, Math.min(31, workplace.cutOffDay ?? 20));
   return sd.getDate() > cut;
 }
