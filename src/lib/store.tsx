@@ -905,11 +905,19 @@ export interface PGBLAdvantage {
   taxSavings: number;
 }
 
+/** Teto da dedução padrão (20%) na Declaração Simplificada do IRPF — vigente. */
+export const SIMPLIFIED_DEDUCTION_CAP = 16754.34;
+
 export function calculatePGBLAdvantage(s: StoreState): PGBLAdvantage {
   const annualPFCLTIncome = getAnnualPFCLTIncome(s);
   const isPJOnly = isPJFocused(s);
   const idealLimit = round2(annualPFCLTIncome * 0.12);
-  const taxSavings = round2(idealLimit * 0.275);
+
+  // Na Simplificada o contribuinte já abate, sem esforço, até R$ 16.754,34.
+  // A vantagem REAL do PGBL é apenas o excedente da dedução sobre esse teto,
+  // tributado na alíquota máxima de 27,5%.
+  const incrementalDeduction = Math.max(0, idealLimit - SIMPLIFIED_DEDUCTION_CAP);
+  const taxSavings = round2(incrementalDeduction * 0.275);
 
   if (isPJOnly || annualPFCLTIncome < 140000) {
     return { scenario: "A", annualPFCLTIncome, idealLimit, taxSavings };
