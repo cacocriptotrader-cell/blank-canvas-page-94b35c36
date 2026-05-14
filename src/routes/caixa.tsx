@@ -144,55 +144,73 @@ function CashFlow() {
 
   function handleDownloadPDF() {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const now = new Date();
     const generatedAt = now.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-    // Design do Documento (Padrão Wealth Management)
+    const activeMonth = billingByMonth.find((m) => m.key === openBillingMonth) || billingByMonth[0];
+    const periodLabel = activeMonth ? activeMonth.label : monthLabel(now);
+    const userName = "Médico(a)";
+
+    // Cabeçalho
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text("DOCFIN - WEALTH MANAGEMENT", 14, 20);
+    doc.setTextColor(0, 0, 0);
+    doc.text("DOCFIN — EXTRATO DE RENDIMENTOS", 14, 20);
 
+    // Subcabeçalho
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(100, 116, 139);
-    doc.text("Extrato de Plantões e Rendimentos", 14, 28);
-
-    // Período correspondente ao mês que o utilizador está a visualizar
-    const activeMonth = billingByMonth.find(m => m.key === openBillingMonth) || billingByMonth[0];
-    const periodLabel = activeMonth ? activeMonth.label : monthLabel(now);
     doc.setFontSize(10);
-    doc.text(`Período: ${periodLabel}`, 14, 35);
-    doc.text(`Emitido em: ${generatedAt}`, 14, 40);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`${userName} · Período: ${periodLabel}`, 14, 27);
 
-    // Construção da Tabela (autotable)
-    const tableData = (activeMonth?.items || []).map(it => [
+    const rows = (activeMonth?.items || []).map((it) => [
       fmtDate(new Date(it.date + "T12:00:00")),
       it.hospital,
       it.regimeLabel,
-      brl2(it.gross)
+      brl2(it.gross),
     ]);
-
-    // Adicione uma linha final com a soma do "TOTAL GERAL" do mês
     const totalGross = activeMonth?.total || 0;
 
     autoTable(doc, {
-      startY: 45,
-      head: [['Data', 'Hospital', 'Regime Tributário', 'Valor Bruto']],
-      body: tableData,
-      foot: [['', '', 'TOTAL GERAL', brl2(totalGross)]],
-      theme: 'striped',
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 3 },
+      startY: 34,
+      head: [["Data", "Hospital", "Regime", "Valor Bruto"]],
+      body: rows,
+      foot: [[{ content: "Total Geral", colSpan: 3, styles: { halign: "right", fontStyle: "bold" } }, { content: brl2(totalGross), styles: { halign: "right", fontStyle: "bold" } }]],
+      theme: "plain",
+      styles: { fontSize: 10, cellPadding: 4, textColor: [0, 0, 0] },
+      headStyles: {
+        fontStyle: "bold",
+        textColor: [0, 0, 0],
+        lineWidth: { top: 0, right: 0, bottom: 0.5, left: 0 },
+        lineColor: [0, 0, 0],
+      },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      footStyles: {
+        textColor: [0, 0, 0],
+        lineWidth: { top: 0.5, right: 0, bottom: 0, left: 0 },
+        lineColor: [0, 0, 0],
+      },
       columnStyles: {
-        3: { halign: 'right' }
-      }
+        3: { halign: "right" },
+      },
+      margin: { left: 14, right: 14, bottom: 18 },
+      didDrawPage: () => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(
+          `Emitido em ${generatedAt} · Docfin`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: "center" },
+        );
+      },
     });
 
-    const fileName = `Extrato_Docfin_${periodLabel.replace(/\s+/g, '_')}.pdf`;
-    doc.save(fileName);
-    setToast("PDF gerado com sucesso");
+    doc.save("extrato_docfin.pdf");
+    setToast("Relatório PDF exportado com sucesso");
     setTimeout(() => setToast(null), 2400);
   }
 
