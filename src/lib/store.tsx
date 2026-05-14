@@ -590,7 +590,7 @@ function nthBusinessDay(year: number, month: number, n: number) {
   return d;
 }
 export function computePaymentDate(shiftDateISO: string, rule: PaymentRule): Date {
-  const sd = new Date(shiftDateISO + "T12:00:00");
+  const sd = startOfDay(parseISO(shiftDateISO));
   const y = sd.getFullYear();
   const m = sd.getMonth();
   switch (rule) {
