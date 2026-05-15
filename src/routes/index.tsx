@@ -123,6 +123,7 @@ function Dashboard() {
   return (
     <div className="animate-fade-in">
       <ExecutiveOverview />
+      <SmartActionFeed />
 
       {showScpAlert && (
         <div className="mx-5 mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3 flex gap-2 animate-fade-in">
@@ -240,7 +241,6 @@ function Dashboard() {
       </Section>
 
       <TreasuryPanel />
-      <SmartActionFeed />
 
       {/* ============ CENTRAL DE DECISÕES ============ */}
       <Section title="Central de Decisões" subtitle="Ações de maior impacto no seu lucro líquido">
