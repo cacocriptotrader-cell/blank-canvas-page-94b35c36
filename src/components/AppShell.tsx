@@ -1,5 +1,11 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Home, PlusCircle, TrendingUp, Wallet, Settings, ShieldCheck, Command, FileSpreadsheet, CalendarDays } from "lucide-react";
+import { useStore } from "@/lib/store";
+
+function getFirstName(full?: string): string {
+  if (!full) return "";
+  return full.trim().split(/\s+/)[0] ?? "";
+}
 
 type NavItem = {
   to: "/" | "/caixa" | "/calendario" | "/novo-registro" | "/futuro" | "/gestao" | "/patrimonio" | "/fechamento";
@@ -19,6 +25,9 @@ const navItems: NavItem[] = [
 
 export function AppShell() {
   const { pathname } = useLocation();
+  const { userProfile } = useStore();
+  const firstName = getFirstName(userProfile?.fullName);
+  const greeting = firstName ? `Olá, Dr(a). ${firstName}` : "Olá, Doutor(a)";
 
   // Rota dedicada de impressão: sem chrome, sem layout.
   if (pathname === "/imprimir-relatorio") {
@@ -61,7 +70,10 @@ export function AppShell() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-sm font-medium text-slate-300 tracking-tight">
+              {greeting}
+            </span>
             <Link
               to="/novo-registro"
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-foreground text-background text-xs font-semibold hover:bg-foreground/90 transition-all duration-200"
